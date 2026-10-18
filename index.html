@@ -425,38 +425,6 @@
   }
   .kb-tab:hover { border-color: var(--ink-3); color: var(--ink); }
   .kb-tab.active:hover { color: #fff; }
-  .diag-entry {
-    display: flex; align-items: center; gap: 14px; justify-content: space-between;
-    margin: 4px 0 14px; padding: 12px 14px; border-radius: 12px;
-    background: linear-gradient(135deg, #FDF4E8, #FAEEDD); border: 1px solid #EFDCC0;
-  }
-  .diag-entry b { display: block; font-size: 13px; color: var(--ink); }
-  .diag-entry span { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
-  .diag-entry button {
-    flex: none; height: 32px; padding: 0 16px; border-radius: 999px; cursor: pointer;
-    border: none; background: var(--accent); color: #fff;
-    font-family: inherit; font-size: 12.5px;
-  }
-  .diag-pane { padding: 8px; }
-  .modal-card.diag-mode .modal-tools,
-  .modal-card.diag-mode .mode-row,
-  .modal-card.diag-mode .beginner-tip,
-  .modal-card.diag-mode #glossLine,
-  .modal-card.diag-mode .palette-strip,
-  .modal-card.diag-mode #markCard,
-  .modal-card.diag-mode #resultTitle { display: none !important; }
-  .modal-card.diag-mode .canvas-pane .hint { display: none; }
-  .diag-pane h3 { margin: 4px 0 10px; font-size: 13px; }
-  .diag-hit {
-    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
-  }
-  .diag-hit .top { display: flex; justify-content: space-between; align-items: baseline; }
-  .diag-hit .nm { font-size: 13px; font-weight: 700; }
-  .diag-hit .sc { font-size: 11px; color: var(--ink-3); }
-  .diag-hit .bar { height: 4px; border-radius: 2px; background: #EEE9DF; margin: 6px 0 8px; overflow: hidden; }
-  .diag-hit .bar i { display: block; height: 100%; background: var(--accent); }
-  .diag-hit p { margin: 0 0 4px; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
-  .diag-hit b { color: var(--ink); }
   .fail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
   .fail-grid article { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 10px 12px; }
   .fail-grid h5 { margin: 8px 0 6px; font-size: 12.5px; }
@@ -1980,15 +1948,7 @@
 
   <!-- 翻车急救 -->
   <div class="ab-detail fail-detail" id="failDetail" hidden>
-    <div class="diag-entry">
-        <div>
-          <b>拍一张，看大概是什么问题</b>
-          <span>照片只能看出条纹、颗粒、发白；其余靠下面的自查</span>
-        </div>
-        <button type="button" id="diagBtn">拍照诊断</button>
-      </div>
-
-      <h4>先判断：漆干了没有</h4>
+    <h4>先判断：漆干了没有</h4>
     <p class="sd-lead">
       同样的缺陷，没干和干了是两种处理。没干透可以稀释后盖过去；干透了只能打磨重来。
       判断方法：<b>用一小段纸胶带轻贴再撕</b>，胶带上有漆屑就是没干透。
@@ -2089,7 +2049,7 @@
 <div class="modal" id="analyzeModal" hidden>
   <div class="modal-card">
     <header class="modal-head">
-      <h3 id="modalTitle">照片分析 · 从模型图上反推用漆</h3>
+      <h3>照片分析 · 从模型图上反推用漆</h3>
       <button class="icon-btn" id="modalClose" aria-label="关闭">✕</button>
     </header>
 
@@ -2125,7 +2085,6 @@
         <p class="hint" id="photoHint">先选一张模型照片；点画面任意位置可以取单点色。</p>
       </div>
       <div class="result-pane">
-        <div class="diag-pane" id="diagPane" hidden></div>
         <div class="mark-card" id="markCard" hidden></div>
         <div class="palette-strip" id="paletteStrip"></div>
         <div class="result-title" id="resultTitle">分析结果</div>
