@@ -53,20 +53,21 @@
   /* ---------- 布局 ---------- */
   .grid {
     display: grid;
-    grid-template-columns: 320px 332px minmax(360px, 1fr);
+    grid-template-columns: 320px 332px minmax(0, 1fr);
     gap: 16px;
     padding: 18px 26px 40px;
     align-items: start;
   }
   @media (max-width: 1180px) {
-    .grid { grid-template-columns: 1fr 1fr; }
+    .grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
     .panel--recipe { grid-column: 1 / -1; }
   }
   @media (max-width: 760px) {
-    .grid { grid-template-columns: 1fr; padding: 14px; }
+    .grid { grid-template-columns: minmax(0, 1fr); padding: 14px; }
   }
 
   .panel {
+    min-width: 0;
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: var(--radius);
@@ -380,6 +381,15 @@
   .ab-cards p:last-child { margin-bottom: 0; }
   .ab-cards b { color: var(--ink); }
   .ab-table { width: 100%; border-collapse: collapse; margin: 4px 0 6px; }
+  @media (max-width: 760px) {
+    .ab-detail { overflow-x: auto; }
+    .ab-table { min-width: 460px; }
+    .ab-cards, .fail-grid, .kb-list { grid-template-columns: minmax(0, 1fr); }
+    .mark-card, .shade-row { flex-wrap: wrap; }
+    .topnav { padding: 0 14px; }
+    .guide { margin: 10px 14px 0; }
+    body { overflow-x: hidden; }
+  }
   .ab-table th, .ab-table td {
     text-align: left; font-size: 11.5px; padding: 6px 9px;
     border-bottom: 1px solid var(--line); color: var(--ink-2);
