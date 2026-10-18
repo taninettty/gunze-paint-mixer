@@ -414,6 +414,35 @@ check('阈值集中在 TUNING', /var TUNING = \{/.test(engineSrc) && /TUNING\.LA
 check('浏览器端没有 const/let', !/\b(const|let)\b/.test(fs.readFileSync(path.join(__dirname, "app.js"), "utf8")),
   'app.js 是 ES5');
 
+console.log('\n[24] 漆面诊断');
+function tex(w, h, fn) {
+  const d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const c = fn(x, y); const i = (y * w + x) * 4;
+    d[i] = c[0]; d[i + 1] = c[1]; d[i + 2] = c[2]; d[i + 3] = 255;
+  }
+  return d;
+}
+const TW = 200, TH = 150, TB = [0xB4, 0x8C, 0x5A];
+const dPlain = tex(TW, TH, () => TB);
+const dSag = tex(TW, TH, (x) => [40, 120, 205].some(c => x >= c && x < c + 3) ? [0x7A, 0x5A, 0x34] : TB);
+const dGrain = tex(TW, TH, (x, y) => ((x * 7 + y * 13) % 29 === 0) ? [235, 235, 230] : TB);
+const dBlush = tex(TW, TH, (x, y) => { const v = (x * 3 + y * 5) % 5; return [215 + v, 213 + v, 210 + v]; });
+
+const r0 = E.diagnoseSurface(dPlain, TW, TH);
+check('干净平面不误报', r0.candidates.length === 0, r0.candidates.map(c => c.name).join(',') || '无');
+
+const r1 = E.diagnoseSurface(dSag, TW, TH);
+check('纵向条带判为流挂', r1.candidates.some(c => c.id === 'sag'), r1.candidates.map(c => c.name).join(',') || '无');
+
+const r2 = E.diagnoseSurface(dGrain, TW, TH);
+check('孤立点判为颗粒', r2.candidates.some(c => c.id === 'grain'), r2.candidates.map(c => c.name).join(',') || '无');
+
+const r3 = E.diagnoseSurface(dBlush, TW, TH);
+check('低彩度高明度判为白化', r3.candidates.some(c => c.id === 'blush'), r3.candidates.map(c => c.name).join(',') || '无');
+
+check('每条结论都带确认方法', r1.candidates.concat(r2.candidates).every(c => c.check && c.check.length > 6), '有');
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

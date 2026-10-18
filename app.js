@@ -1057,7 +1057,24 @@
     mode: 'mask'
   };
 
-  function openModal() {
+  function openModal(mode) {
+    photo.diag = mode === 'diag';
+    var dp = $('diagPane');
+    if (dp) dp.hidden = !photo.diag;
+
+    var card = document.querySelector('.modal-card');
+    if (card) card.classList.toggle('diag-mode', photo.diag);
+    if ($('modalTitle')) {
+      $('modalTitle').textContent = photo.diag
+        ? '漆面诊断 · 拍一张看喷坏了什么'
+        : '照片分析 · 从模型图上反推用漆';
+    }
+
+    ['paletteStrip', 'markCard', 'clusterList', 'resultTitle'].forEach(function (id) {
+      var el = $(id);
+      if (el) el.hidden = photo.diag;
+    });
+
     $('analyzeModal').hidden = false;
     if (photo.loaded) {
       renderCanvas(photo.mode, null);
@@ -1070,7 +1087,8 @@
   }
 
   function bindPhoto() {
-    $('analyzeBtn').addEventListener('click', openModal);
+    $('analyzeBtn').addEventListener('click', function () { openModal('color'); });
+    if ($('diagBtn')) $('diagBtn').addEventListener('click', function () { openModal('diag'); });
     $('modalClose').addEventListener('click', closeModal);
 
     $('analyzeModal').addEventListener('click', function (ev) {
@@ -1262,6 +1280,12 @@
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
 
       photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+
+      if (photo.diag) {
+        renderDiag(photo.baseImageData.data, w, h);
+        cv.hidden = false;
+        return;
+      }
       photo.mark = null;
       photo.marks = [];
       photo.kindOverride = {};
@@ -1341,6 +1365,50 @@
     photo.samples = flat.length > edge.length * 0.25 ? flat : edge;
     photo.flatRatio = edge.length ? flat.length / edge.length : 0;
     photo.bg = eN ? [Math.round(eR / eN), Math.round(eG / eN), Math.round(eB / eN)] : null;
+  }
+
+  function renderDiag(data, w, h) {
+    var res = E.diagnoseSurface(data, w, h);
+    var pane = $('diagPane');
+    pane.innerHTML = '';
+
+    var title = document.createElement('h3');
+    title.textContent = res.candidates.length ? '照片里看到这些' : '照片里没看出明显问题';
+    pane.appendChild(title);
+
+    res.candidates.forEach(function (c) {
+      var box = document.createElement('div');
+      box.className = 'diag-hit';
+
+      var top = document.createElement('div');
+      top.className = 'top';
+      var nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = c.name;
+      var sc = document.createElement('span');
+      sc.className = 'sc';
+      sc.textContent = c.score > 0.6 ? '很像' : c.score > 0.35 ? '有点像' : '不太像';
+      top.appendChild(nm); top.appendChild(sc);
+
+      var bar = document.createElement('div');
+      bar.className = 'bar';
+      var fill = document.createElement('i');
+      fill.style.width = Math.round(c.score * 100) + '%';
+      bar.appendChild(fill);
+
+      var p1 = document.createElement('p');
+      p1.innerHTML = '<b>依据</b>　' + c.why;
+      var p2 = document.createElement('p');
+      p2.innerHTML = '<b>怎么确认</b>　' + c.check;
+
+      box.appendChild(top); box.appendChild(bar); box.appendChild(p1); box.appendChild(p2);
+      pane.appendChild(box);
+    });
+
+    var tip = document.createElement('p');
+    tip.style.cssText = 'font-size:11.5px;color:#9C968A;line-height:1.7;margin-top:10px';
+    tip.textContent = '照片只能看出条纹、颗粒、发白三类。橘皮、干喷、渗漆要靠侧光看和手指摸——下面那八张卡按症状查。';
+    pane.appendChild(tip);
   }
 
   function runAnalysis() {

@@ -2324,6 +2324,124 @@ var assign = new Array(pts.length).fill(0);
     });
   }
 
+  /**
+   * 从一张漆面照片里找缺陷线索。
+   *
+   * 只做单张照片真正能分辨的三件事：纵向流挂、孤立颗粒、白化。
+   * 橘皮、干喷这类看纹理的，照片上不可靠——交给"自查清单"，不硬判。
+   *
+   * @param {Uint8ClampedArray} data RGBA
+   */
+  function diagnoseSurface(data, width, height) {
+    var n = width * height;
+    var L = new Float32Array(n);
+    var C = new Float32Array(n);
+
+    for (var i = 0; i < n; i++) {
+      var k = i * 4;
+      var r = data[k], g = data[k + 1], b = data[k + 2];
+      L[i] = r * 0.299 + g * 0.587 + b * 0.114;
+      C[i] = Math.max(r, g, b) - Math.min(r, g, b);
+    }
+
+    function px(x, y) { return L[y * width + x]; }
+
+    // —— 颗粒：孤立点 ——
+    // 条件：和四个正邻居差很多，但四个邻居彼此接近（排除了边缘）
+    var speck = 0, flatN = 0;
+    for (var y = 1; y < height - 1; y++) {
+      for (var x = 1; x < width - 1; x++) {
+        var p = y * width + x;
+        var c0 = L[p];
+        var a = px(x - 1, y), b2 = px(x + 1, y), c = px(x, y - 1), d = px(x, y + 1);
+        var nb = [a, b2, c, d];
+        var nbMin = Math.min(a, b2, c, d), nbMax = Math.max(a, b2, c, d);
+
+        if (nbMax - nbMin > 10) continue;      // 邻居本身在边上，跳过
+        flatN++;
+
+        var dev = Math.abs(c0 - (a + b2 + c + d) / 4);
+        if (dev > 13 && nbMax - nbMin < 8) speck++;
+      }
+    }
+    var speckRatio = flatN ? speck / flatN : 0;
+
+    // —— 流挂：纵向条带 ——
+    // 每一行找"横向强边"，再看这些位置在竖直方向是否连续
+    var colHits = new Float32Array(width);
+    for (var yy = 1; yy < height - 1; yy++) {
+      for (var xx = 1; xx < width - 1; xx++) {
+        var gx = Math.abs(px(xx + 1, yy) - px(xx - 1, yy));
+        var gy = Math.abs(px(xx, yy + 1) - px(xx, yy - 1));
+        if (gx > 16 && gy < 8) colHits[xx] += 1;
+      }
+    }
+    var streakCols = 0;
+    for (var cx = 0; cx < width; cx++) {
+      if (colHits[cx] > height * 0.35) streakCols++;
+    }
+    var sagRatio = streakCols / width;
+
+    // —— 白化：整片发白发灰 ——
+    var sumL = 0, sumC = 0;
+    for (var q = 0; q < n; q++) { sumL += L[q]; sumC += C[q]; }
+    var meanL = sumL / n, meanC = sumC / n;
+
+    // —— 粗糙度（辅助，不作为独立判定）——
+    var rough = 0, rn = 0;
+    for (var y2 = 1; y2 < height - 1; y2++) {
+      for (var x2 = 1; x2 < width - 1; x2++) {
+        rough += Math.abs(px(x2 + 1, y2) - px(x2 - 1, y2)) + Math.abs(px(x2, y2 + 1) - px(x2, y2 - 1));
+        rn++;
+      }
+    }
+    var roughAvg = rn ? rough / rn : 0;
+
+    var cands = [];
+
+    function add(id, name, score, why, check) {
+      if (score < 0.15) return;
+      cands.push({ id: id, name: name, score: score, why: why, check: check });
+    }
+
+    add('sag', '流挂（也可能是刻线）',
+      clamp01(sagRatio / 0.03),
+      '画面里有连续的纵向硬边，从上到下一直延伸',
+      '侧光看有没有一道往下淌的厚边、摸上去有台阶；如果边缘笔直整齐，那是分模线或刻线');
+
+    add('grain', '颗粒 / 灰尘',
+      clamp01((speckRatio - 0.0015) / 0.012),
+      '平坦区域里有大量孤立的小亮点或暗点',
+      '换个角度还是同一批点（不是反光）→ 颗粒；点在边缘、扎手 → 灰尘');
+
+    add('blush', '白化',
+      clamp01((150 - meanC) / 55) * clamp01((meanL - 145) / 55),
+      '整片彩度很低、明度偏高，像蒙了层白霜',
+      '这件漆本来不是这个色却发白了；手擦不掉，只能打磨');
+
+    add('dry', '干喷 / 粗糙',
+      clamp01((roughAvg - 7) / 9) * (1 - clamp01(speckRatio / 0.01)) * (1 - clamp01(sagRatio / 0.05)),
+      '整体颗粒感很重，但没有条带也没有孤立点',
+      '摸上去发涩、反光发哑、像砂纸');
+
+    cands.sort(function (a, b) { return b.score - a.score; });
+
+    return {
+      candidates: cands.slice(0, 3),
+      stats: {
+        speck: speckRatio,
+        sag: sagRatio,
+        rough: roughAvg,
+        meanL: meanL,
+        meanC: meanC
+      }
+    };
+  }
+
+  function clamp01(v) {
+    return v < 0 ? 0 : v > 1 ? 1 : v;
+  }
+
   /** 把颜色说成金属名：香槟金、黄铜、红铜、枪铁…… */
   function metalName(lab) {
     var L = lab[0];
@@ -2361,6 +2479,7 @@ var assign = new Array(pts.length).fill(0);
     solve: solve,
     nearestPaint: nearestPaint,
     metalName: metalName,
+    diagnoseSurface: diagnoseSurface,
     shadeVariants: shadeVariants,
     nearestPaints: nearestPaints,
     judgeMetallic: judgeMetallic,
