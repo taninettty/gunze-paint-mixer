@@ -1,0 +1,27 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: 跑测试
+        run: node test.js
+
+      - name: 检查页面引用的文件都在
+        run: |
+          for f in index.html app.js engine.js gunze-data.js spectral.js test.js; do
+            test -f "$f" || { echo "缺少 $f"; exit 1; }
+          done
+          echo "文件齐全"

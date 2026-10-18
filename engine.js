@@ -347,7 +347,7 @@
     return p ? { name: code + ' ' + p.name, hex: p.hex } : null;
   }).filter(Boolean);
 
-  // 色相缓存：209 支色浆每次都重算 Lab 太慢
+  // 色相缓存：226 支漆每次都重算 Lab 太慢
   var hueCache = {};
 
   function pigmentHue(p) {
@@ -539,7 +539,7 @@
           if (!weakest || l.share < weakest.share) weakest = l;
         });
 
-        // 209 支色浆全试太慢，只挑 10 支候选：先基础色，再按色相接近程度
+        // 226 支全试太慢，只挑 10 支候选：先基础色，再按色相接近程度
         var th = hueAngle(targetLab);
         var cands = PIGMENTS
           .filter(function (p) { return usedIds.indexOf(p.id) < 0; })

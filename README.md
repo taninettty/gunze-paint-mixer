@@ -1,5 +1,7 @@
 ﻿# 调色台 · 郡士 Mr. Color 调色计算
 
+[![tests](https://github.com/taninettty/gunze-paint-mixer/actions/workflows/test.yml/badge.svg)](https://github.com/taninettty/gunze-paint-mixer/actions/workflows/test.yml)
+
 给一个目标色，从**郡士（GSI Creos / Mr.Hobby）Mr. Color** 里算出该用哪几支、各几滴。
 
 双击 `index.html` 就能用——不用装环境、不用联网（`spectral.js`、`gunze-data.js` 都在同目录）。
@@ -24,10 +26,10 @@
 
 ## 关于色库
 
-`gunze-data.js` 里是 **199 支郡士 Mr. Color C 系列**，包含色号、中文名、英文名、近似屏幕色。界面上全部显示中文名，搜索框中英文和色号都能搜。
+`gunze-data.js` 里是 **226 支郡士 Mr. Color C 系列**，包含色号、中文名、英文名、近似屏幕色。界面上全部显示中文名，搜索框中英文和色号都能搜。
 
 - 色号与英文名取自 [Scalemates 的 Mr. Color 色表](https://www.scalemates.com/colors/hobby-color--657/)，中文名按中文模型圈的通用叫法：C1–C50 取自[上上模型店的郡士漆表](https://blog.sina.cn/dpool/blog/s/blog_5aef5e870100jlnx.html)（如 C39「消光暗黄/沙漠黄」、C12「半光橄榄绿1」、C29「半光舰底红」），C51 以后沿用同一套命名规则（光泽/半光/消光 + 色名）；RLM71、FS34097 这类官方代号保持原样
-- 共 **226 支**，其中 198 支实色、28 支特殊漆（见下）
+- 共 **226 支**（198 实色、15 金属、10 透明、2 消光剂、1 珠光）
 
 色值终究是屏幕近似值。你觉得哪支不对，直接改 `gunze-data.js` 里那条的 `hex` 就行，其它都不用动。
 
@@ -120,7 +122,7 @@
 
 列表按漆种分组，一眼能分：
 
-- **实色 · 珠光 199**（珠光要和实色调，所以放一起）
+- **实色 · 珠光 199**（198 实色 + 1 珠光；珠光要和实色调，所以放一起）
 - **金属漆 15**（单独一组）
 - **透明漆 10**
 - **消光剂 2**
@@ -397,7 +399,7 @@ R = [1 − Rg(a − b·coth(bX))] / [a − Rg + b·coth(bX)]
 a = 1 + K/S,   b = √(a² − 1)
 ```
 
-对 199 支漆 × 不同厚度做搜索，给出最像的 3 支和对应的遮盖程度。
+对全部 226 支漆 × 不同厚度做搜索，给出最像的 3 支和对应的遮盖程度。
 
 示例（底漆浅灰，目标取 C39 满涂色）：
 
@@ -421,7 +423,7 @@ a = 1 + K/S,   b = √(a² − 1)
 | `index.html` | 界面 |
 | `app.js` | 交互逻辑 |
 | `engine.js` | 混色与配方求解内核（不依赖 DOM） |
-| `gunze-data.js` | 郡士 199 支色库 |
+| `gunze-data.js` | 郡士 226 支色库 |
 | `spectral.js` | 光谱数据与色度转换（MIT，© Ronald van Wijnen） |
 | `test.js` | 自测 |
 | `preview.png` | 界面截图 |

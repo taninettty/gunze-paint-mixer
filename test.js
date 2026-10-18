@@ -391,6 +391,24 @@ check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js"><\/script
 check('index.html 引入 engine.js/app.js', /engine\.js/.test(html) && /app\.js/.test(html));
 check('同目录有 spectral.js', fs.existsSync(path.join(__dirname, 'spectral.js')));
 
+console.log('\n[23] 文档与数据一致');
+const README = fs.readFileSync(path.join(__dirname, "README.md"), "utf8");
+const byKind = {};
+E.PIGMENTS.forEach(function (p) { byKind[p.kind] = (byKind[p.kind] || 0) + 1; });
+
+const expectLine = "共 **" + E.PIGMENTS.length + " 支**（" +
+  byKind.solid + " 实色、" + byKind.metal + " 金属、" + byKind.clear + " 透明、" +
+  byKind.additive + " 消光剂、" + byKind.pearl + " 珠光）";
+
+check('README 的漆数与色库一致', README.indexOf(expectLine) >= 0, expectLine);
+
+const stale = README.match(/\*\*(\d+) 支郡士/);
+check('README 没写旧总数', !stale || Number(stale[1]) === E.PIGMENTS.length,
+  stale ? stale[1] + ' vs ' + E.PIGMENTS.length : '无');
+
+const engineSrc = fs.readFileSync(path.join(__dirname, "engine.js"), "utf8");
+check('engine.js 注释没有旧数字', engineSrc.indexOf("209 支") < 0, 'clean');
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {
