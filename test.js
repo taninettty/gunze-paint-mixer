@@ -1,0 +1,403 @@
+﻿/* 自测：node test.js */
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const E = require('./engine.js');
+
+let pass = 0;
+let fail = 0;
+
+function check(name, cond, extra) {
+  if (cond) {
+    pass++;
+    console.log('  ok   ' + name + (extra ? '  ' + extra : ''));
+  } else {
+    fail++;
+    console.log('  FAIL ' + name + (extra ? '  ' + extra : ''));
+  }
+}
+
+function near(a, b, tol) { return Math.abs(a - b) <= tol; }
+
+console.log('\n[1] CIEDE2000 与 Sharma 标准测试数据对比');
+const sharma = [
+  [[50, 2.6772, -79.7751], [50, 0, -82.7485], 2.0425],
+  [[50, 3.1571, -77.2803], [50, 0, -82.7485], 2.8615],
+  [[50, 2.8361, -74.0200], [50, 0, -82.7485], 3.4412],
+  [[50, -1.3802, -84.2814], [50, 0, -82.7485], 1.0000],
+  [[50, -1.1848, -84.8006], [50, 0, -82.7485], 1.0000],
+  [[50, -0.9009, -85.5211], [50, 0, -82.7485], 1.0000],
+  [[50, 0, 0], [50, -1, 2], 2.3669],
+  [[50, -1, 2], [50, 0, 0], 2.3669],
+  [[50, 2.49, -0.001], [50, -2.49, 0.0009], 7.1792],
+  [[50, 2.49, -0.001], [50, -2.49, 0.001], 7.1792]
+];
+sharma.forEach(([a, b, want], i) => {
+  const got = E.deltaE00(a, b);
+  check('pair ' + (i + 1), near(got, want, 0.01), `want ${want}  got ${got.toFixed(4)}`);
+});
+
+console.log('\n[2] 色库完整性');
+check('色库接近 200 支', E.PIGMENTS.length > 190, E.PIGMENTS.length + ' 支');
+check('C1–C7 基础色齐全', ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'].every(c => E.PIGMENTS.some(p => p.code === c)));
+check('C8/C9/C10 以金属漆入库', ['C8', 'C9', 'C10'].every(c => E.PIGMENTS.some(p => p.code === c && p.kind === 'metal')));
+check('C30 以消光剂入库', E.PIGMENTS.some(p => p.code === 'C30' && p.kind === 'additive'));
+check('透明漆单独标记', E.PIGMENTS.filter(p => p.kind === 'clear').length >= 8);
+check('每支都有合法色值', E.PIGMENTS.every(p => /^#[0-9A-F]{6}$/i.test(p.hex)));
+check('色号不重复', new Set(E.PIGMENTS.map(p => p.code)).size === E.PIGMENTS.length);
+
+console.log('\n[3] 单支自洽：拿漆本身的颜色当目标，应该 100% 命中');
+const sample = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C13', 'C39', 'C41', 'C29', 'C12']
+  .map(c => E.PIGMENTS.find(p => p.code === c)).filter(Boolean);
+
+sample.forEach(p => {
+  const r = E.solve({ targetHex: p.hex, pigmentIds: [p.id], total: 10 });
+  check(
+    p.code.padEnd(4),
+    r.ok && r.deltaE < 0.01 && r.lines.length === 1 && near(r.lines[0].percent, 100, 0.01),
+    `ΔE=${r.deltaE.toFixed(4)}`
+  );
+});
+
+console.log('\n[4] 混色物理方向：蓝 + 黄 必须发绿');
+const ksOf = h => E.ksOf(new (require('./spectral.js').Color)(h).R);
+const blue = E.PIGMENTS.find(p => p.code === 'C5');
+const yellow = E.PIGMENTS.find(p => p.code === 'C4');
+const mix = E.measure(E.mixSpectrum([{ ks: ksOf(blue.hex) }, { ks: ksOf(yellow.hex) }], [1, 1]));
+const hue = (Math.atan2(mix.lab[2], mix.lab[1]) * 180) / Math.PI;
+check('C5 青 + C4 黄 落在绿色区', hue > 80 && hue < 180, `h=${hue.toFixed(1)}°  ${mix.hex}`);
+check('没有变成灰', Math.hypot(mix.lab[1], mix.lab[2]) > 10, `C*=${Math.hypot(mix.lab[1], mix.lab[2]).toFixed(1)}`);
+
+console.log('\n[5] 用基础 7 色调常见郡士色');
+const BASIC = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+const targets = [
+  ['C39 Dark Yellow', '#B79764'],
+  ['C13 Neutral Gray', '#5B6B78'],
+  ['C12 Olive Drab', '#685932'],
+  ['C29 Hull Red', '#603336'],
+  ['C19 Sandy Brown', '#96823B'],
+  ['C14 Navy Blue', '#004652'],
+  ['C11 Light Gull Gray', '#BDC3C4']
+];
+
+let slowest = 0;
+targets.forEach(([name, hex]) => {
+  const t0 = Date.now();
+  const r = E.solve({ targetHex: hex, pigmentIds: BASIC, total: 20 });
+  const ms = Date.now() - t0;
+  slowest = Math.max(slowest, ms);
+  const sum = r.lines.reduce((a, l) => a + l.percent, 0);
+  const drops = r.lines.reduce((a, l) => a + l.amount, 0);
+  check(
+    name,
+    r.ok && r.deltaE < 5 && near(sum, 100, 0.5) && near(drops, 20, 0.01),
+    `ΔE=${r.deltaE.toFixed(1)}  ${ms}ms  ${r.lines.map(l => l.pigment.code + ' ' + l.percent.toFixed(0) + '%').join(' / ')}`
+  );
+});
+
+console.log('\n[6] 最近色号');
+const n1 = E.nearestPaint('#B79764');
+check('C39 的色值指向 C39', n1.pigment.code === 'C39' && n1.deltaE < 0.01, n1.pigment.code + ' ΔE=' + n1.deltaE.toFixed(3));
+const c2 = E.PIGMENTS.find(p => p.code === 'C2');
+const n2 = E.nearestPaint(c2.hex);
+check('C2 的色值指向 C2', n2.pigment.code === 'C2', n2.pigment.code + ' ΔE=' + n2.deltaE.toFixed(3));
+
+console.log('\n[7] 降级与边界');
+const none = E.solve({ targetHex: '#B79764', pigmentIds: [], total: 20 });
+check('没选漆时给提示不崩', none.ok === false && typeof none.error === 'string', none.error);
+
+const onlyWhite = E.solve({ targetHex: '#B79764', pigmentIds: ['C1'], total: 20 });
+check('只有白也能算出结果并给建议', onlyWhite.ok === true && !!onlyWhite.missingHue, onlyWhite.missingHue);
+
+const black = E.solve({ targetHex: '#0A0A0A', pigmentIds: ['C2'], total: 20 });
+check('极深色不发散', black.ok && /^#[0-9A-F]{6}$/i.test(black.predicted.hex), black.predicted.hex + ' ΔE=' + black.deltaE.toFixed(2));
+
+const many = E.solve({ targetHex: '#B79764', pigmentIds: E.PIGMENTS.slice(0, 12).map(p => p.id), total: 20 });
+check('超过 8 支只取前 8 支', many.ok && many.lines.length <= 9, 'lines=' + many.lines.length);
+
+
+console.log('\n[8] 照片分析');
+const fake = [];
+for (let i = 0; i < 400; i++) fake.push([200, 30, 30]);
+for (let i = 0; i < 300; i++) fake.push([30, 160, 60]);
+for (let i = 0; i < 300; i++) fake.push([40, 60, 180]);
+const an = E.analyzeImage(fake, { k: 3 });
+check('三色图拆成 3 块', an.clusters.length === 3, an.clusters.map(c => c.hex + ' ' + c.share.toFixed(2)).join(' | '));
+check('面积占比对得上', near(an.clusters[0].share, 0.4, 0.02), '主色 ' + (an.clusters[0].share * 100).toFixed(0) + '%');
+check('主色还原准确', E.deltaE00(an.clusters[0].lab, E.labOfHex('#C81E1E')) < 1.5, an.clusters[0].hex);
+const an2 = E.analyzeImage(fake, { k: 3 });
+check('同样的图结果稳定', an2.clusters[0].hex === an.clusters[0].hex);
+
+const warm = [];
+for (let i = 0; i < 500; i++) warm.push([150, 128, 100]);
+const wb = E.analyzeImage(warm, { k: 3, whiteRef: [150, 128, 100] });
+check('白平衡把暖灰拉成中性', Math.hypot(wb.clusters[0].lab[1], wb.clusters[0].lab[2]) < 2,
+  wb.clusters[0].hex + ' C*=' + Math.hypot(wb.clusters[0].lab[1], wb.clusters[0].lab[2]).toFixed(2));
+const noWb = E.analyzeImage(warm, { k: 3 });
+check('不做白平衡时它是偏黄的', Math.hypot(noWb.clusters[0].lab[1], noWb.clusters[0].lab[2]) > 8,
+  noWb.clusters[0].hex);
+
+
+console.log('\n[9] 分层反推');
+const Sp = require("./spectral.js");
+const ksCache = {};
+const ksOfHex = h => (ksCache[h] || (ksCache[h] = E.ksOf(new Sp.Color(h).R)));
+
+function synth(code, primerHex, X) {
+  const p = E.PIGMENTS.find(x => x.code === code);
+  const ks = ksOfHex(p.hex);
+  const Rg = new Sp.Color(primerHex).R;
+  const R = ks.map((k, i) => {
+    const a = 1 + k, b = Math.sqrt(a * a - 1), t = b * X;
+    const coth = t > 20 ? 1 : (Math.exp(2 * t) + 1) / (Math.exp(2 * t) - 1);
+    return Math.min(1, Math.max(0.002, (1 - Rg[i] * (a - b * coth)) / (a - Rg[i] + b * coth)));
+  });
+  return new Sp.Color(R).toString();
+}
+
+check('有 5 种标准底漆', E.PRIMERS.length === 5, E.PRIMERS.map(x => x.name).join('/'));
+check('含粉底和棕底', ['粉底', '棕底'].every(n => E.PRIMERS.some(x => x.name === n)));
+
+[['C39', '#B8B8B6', 1.0], ['C39', '#232323', 0.5], ['C41', '#8B4A3B', 1.2], ['C51', '#F0C6C0', 0.9]].forEach(([code, primer, X]) => {
+  const obs = synth(code, primer, X);
+  const r = E.solveLayered({ targetHex: obs, primerHex: primer, limit: 3 });
+  check(code + ' 喷在 ' + primer + ' 能被反推出来',
+    r.candidates[0].pigment.code === code && r.candidates[0].deltaE < 1.2,
+    obs + ' -> ' + r.candidates[0].pigment.code + ' ΔE=' + r.candidates[0].deltaE.toFixed(2));
+});
+
+const opaque = E.solveLayered({ targetHex: synth('C6', '#B8B8B6', 3), primerHex: '#B8B8B6', limit: 1 });
+check('盖死的情形不硬报层数', /盖死/.test(opaque.candidates[0].label), opaque.candidates[0].label);
+
+const quick = Date.now();
+E.solveLayered({ targetHex: '#B79764', primerHex: '#B8B8B6', limit: 3 });
+check('单次反推 < 120ms', Date.now() - quick < 120, (Date.now() - quick) + 'ms');
+
+console.log('\n[10] 光泽粗判');
+function makeImg(w, h, paint) {
+  const d = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const c = paint(x, y);
+    const i = (y * w + x) * 4;
+    d[i] = c[0]; d[i+1] = c[1]; d[i+2] = c[2]; d[i+3] = 255;
+  }
+  return d;
+}
+
+const matte = E.analyzeGloss(makeImg(200, 200, () => [128, 128, 128]), 200, 200);
+check('纯色平涂判为消光', matte.level.indexOf('消光') >= 0, matte.level + ' ratio=' + (matte.ratio*100).toFixed(1) + '%');
+
+const glossy = E.analyzeGloss(makeImg(200, 200, (x, y) => {
+  const onDot = (x % 14 < 3) && (y % 14 < 3);
+  return onDot ? [255, 255, 255] : [40, 40, 40];
+}), 200, 200);
+check('密集锐利高光判为光泽', glossy.level === '光泽',
+  glossy.level + ' ratio=' + (glossy.ratio*100).toFixed(1) + '% sharp=' + glossy.sharpness.toFixed(0));
+check('粗糙度数值有区分', glossy.sharpness > matte.sharpness, 'gloss=' + glossy.sharpness.toFixed(0) + ' matte=' + matte.sharpness.toFixed(0));
+
+
+console.log('\n[11] 配比取整');
+const rr = E.solve({ targetHex: '#B79764', pigmentIds: ['C1','C2','C3','C4','C5','C6','C7'], total: 20, _noHint: true });
+const s10 = E.snapRecipe({ targetHex: '#B79764', lines: rr.lines, denom: 10 });
+check('取整后份数加起来等于分母', s10.items.reduce((a, x) => a + x.parts, 0) === 10, s10.items.map(x => x.pigment.code + ' ' + x.parts).join(' : '));
+check('取整配方有对应的 ΔE', s10.deltaE >= rr.deltaE && s10.deltaE < 25, 'ΔE ' + s10.deltaE.toFixed(1) + '（精确 ' + rr.deltaE.toFixed(1) + '）');
+const s5 = E.snapRecipe({ targetHex: '#B79764', lines: rr.lines, denom: 5 });
+check('5 份比 10 份更粗', s5.deltaE >= s10.deltaE, '5份 ΔE ' + s5.deltaE.toFixed(1) + ' / 10份 ' + s10.deltaE.toFixed(1));
+
+const q5 = E.quantizeRecipe({ targetHex: '#B79764', lines: rr.lines, step: 0.05 });
+check('5% 网格：百分比都是 5 的倍数',
+  q5.items.every(x => Math.abs(x.percent % 5) < 1e-9),
+  q5.items.map(x => x.pigment.code + ' ' + x.percent + '%').join(' + '));
+check('5% 网格：加起来正好 100%', near(q5.items.reduce((a, x) => a + x.percent, 0), 100, 1e-6));
+check('5% 网格：不劣于直接四舍五入', q5.deltaE <= s10.deltaE + 1e-6,
+  '网格 ' + q5.deltaE.toFixed(2) + ' vs 四舍五入 ' + s10.deltaE.toFixed(2));
+check('5% 网格：比精确解差但可用', q5.deltaE > rr.deltaE && q5.deltaE < 10, 'ΔE ' + q5.deltaE.toFixed(1));
+
+
+console.log('\n[12] 主料毫升 + 微量滴数');
+const Sp2 = require('./spectral.js');
+const ks2 = h => E.ksOf(new Sp2.Color(h).R);
+const pick = c => E.PIGMENTS.find(p => p.code === c);
+
+// 按用户举的例子合成一个色：20 红 + 80 蓝 + 2 滴黑 + 2 滴绿
+const exComps = [pick('C3'), pick('C5'), pick('C2'), pick('C6')].map(p => ({ ks: ks2(p.hex) }));
+const exW = [20, 80, 2 * E.DROP_ML, 2 * E.DROP_ML];
+const exTarget = E.measure(E.mixSpectrum(exComps, exW)).hex;
+
+const mixed = E.solveMixed({ targetHex: exTarget, pigmentIds: ['C1','C2','C3','C4','C5','C6','C7'], volume: 100 });
+check('能反推出 80 蓝 20 红 的主料', mixed.ok && mixed.items.filter(x => x.kind === 'bulk').length === 2,
+  mixed.items.filter(x => x.kind === 'bulk').map(x => x.pigment.code + ' ' + x.ml.toFixed(0) + 'ml').join(' / '));
+const blueIt = mixed.items.find(x => x.pigment.code === 'C5');
+const redIt = mixed.items.find(x => x.pigment.code === 'C3');
+check('主料毫升对得上', Math.abs(blueIt.ml - 80) <= 5 && Math.abs(redIt.ml - 20) <= 5,
+  blueIt.ml.toFixed(0) + 'ml / ' + redIt.ml.toFixed(0) + 'ml');
+check('微量用整滴表示', mixed.items.filter(x => x.kind === 'trace').every(x => Number.isInteger(x.drops) && x.drops > 0),
+  mixed.items.filter(x => x.kind === 'trace').map(x => x.pigment.code + ' ' + x.drops + '滴').join(' / ') || '无');
+check('混合配方 ΔE 够小', mixed.deltaE < 1.5, 'ΔE ' + mixed.deltaE.toFixed(2));
+check('总毫升 = 主料 + 微量', Math.abs(mixed.totalMl - mixed.items.reduce((a, x) => a + x.ml, 0)) < 1e-6,
+  mixed.totalMl.toFixed(2) + ' ml');
+
+const t1 = Date.now();
+E.solveMixed({ targetHex: '#B79764', pigmentIds: ['C1','C2','C3','C4','C5','C6','C7'], volume: 100 });
+check('单次混合求解 < 150ms', Date.now() - t1 < 150, (Date.now() - t1) + 'ms');
+
+
+console.log('\n[13] 色相调子');
+const toneOf = code => E.toneOf(E.labOfHex(E.PIGMENTS.find(p => p.code === code).hex));
+check('白色算中性', toneOf('C1') === '中性', toneOf('C1'));
+check('IJA Green 是蓝调绿', toneOf('C16') === '蓝调绿', toneOf('C16'));
+check('军灰算中性而不是蓝', toneOf('C13') === '中性', toneOf('C13'));
+check('红就是红', toneOf('C3').indexOf('红') >= 0, toneOf('C3'));
+const mixed3 = E.solveMixed({ targetHex: '#B79764', pigmentIds: ['C1','C2','C3','C4','C5','C6','C7'], volume: 100 });
+check('配方里每支都带调子', mixed3.items.every(x => typeof x.tone === 'string' && x.tone.length > 0),
+  mixed3.items.map(x => x.pigment.code + ':' + x.tone).join(' / '));
+
+
+console.log('\n[14] 特殊漆');
+const kinds = E.PIGMENTS.reduce((a, x) => { a[x.kind] = (a[x.kind] || 0) + 1; return a; }, {});
+check('金属漆入库', (kinds.metal || 0) >= 15, 'metal=' + kinds.metal);
+check('透明漆入库', (kinds.clear || 0) >= 10, 'clear=' + kinds.clear);
+check('有珠光和消光剂', (kinds.pearl || 0) >= 1 && (kinds.additive || 0) >= 2, 'pearl=' + kinds.pearl + ' additive=' + kinds.additive);
+check('金属漆可以参与混色', E.PIGMENTS.filter(p => p.kind === 'metal').every(p => p.mixable));
+
+const withMetal = E.solve({ targetHex: '#B79764', pigmentIds: ['C8', 'C1', 'C2'], total: 100, _noHint: true });
+check('金属漆能进配方', withMetal.ok && withMetal.lines.some(l => l.pigment.kind === 'metal'),
+  withMetal.lines.map(l => l.pigment.code).join(','));
+check('金属混实色会提示后果', /金属粉/.test((withMetal.warnings || []).join('')), (withMetal.warnings || []).join(''));
+
+const onlyMetal = E.solve({ targetHex: '#DCDCDD', pigmentIds: ['C8'], total: 100, _noHint: true });
+check('只选金属漆也能算', onlyMetal.ok, withMetal.lines.map(l => l.pigment.code).join(','));
+
+const candy = E.solve({ targetHex: '#8B1A2B', pigmentIds: ['C8', 'C47'], total: 100, _noHint: true });
+check('金属 + 透明会提示分层而不是混合', /分层|糖果|伪电镀/.test((candy.warnings || []).join('')),
+  (candy.warnings || []).join(''));
+
+const withAdditive = E.solve({ targetHex: '#B79764', pigmentIds: ['C30', 'C1', 'C2'], total: 100, _noHint: true });
+check('消光剂仍不参与调色', withAdditive.lines.every(l => l.pigment.code !== 'C30'),
+  withAdditive.lines.map(l => l.pigment.code).join(','));
+
+const metalNear = E.nearestPaint('#DCDCDD');
+check('找色时金属漆仍能命中', metalNear.pigment.code === 'C8', metalNear.pigment.code + ' ΔE=' + metalNear.deltaE.toFixed(2));
+
+
+console.log('\n[15] 工序模板');
+['chrome', 'candy', 'metal'].forEach(id => {
+  const pr = E.buildProcess(id, { metal: 'C8', clear: 'C47' });
+  check(pr.name + ' 模板可用', pr && pr.steps.length >= 2, pr.name + '：' + pr.steps.map(s => s.code).join(' → '));
+});
+
+const chrome = E.buildProcess('chrome', { metal: 'C8', clear: 'C47' });
+check('伪电镀三步齐全', chrome.steps.map(s => s.code).join(',') === 'C2,C8,C47', chrome.steps.map(s => s.code).join(','));
+check('每步都有层数和要点', chrome.steps.every(s => s.qty && s.note));
+check('会带透明色用途提示', /尾灯|伪电镀/.test(chrome.clearHint || ''), chrome.clearHint);
+
+const candy2 = E.buildProcess('candy', { metal: 'C90', clear: 'C50' });
+check('换金属和透明色能生效', candy2.steps.some(s => s.code === 'C90') && candy2.steps.some(s => s.code === 'C50'),
+  candy2.steps.map(s => s.code).join(','));
+
+
+console.log('\n[16] 阴影合并');
+const shaded = [];
+for (let i = 0; i < 500; i++) shaded.push([200, 40, 40]);
+for (let i = 0; i < 400; i++) shaded.push([120, 25, 25]);
+for (let i = 0; i < 300; i++) shaded.push([40, 80, 180]);
+for (let i = 0; i < 250; i++) shaded.push([20, 40, 95]);
+for (let i = 0; i < 800; i++) shaded.push([222, 222, 222]);
+const sh = E.analyzeImage(shaded, { k: 8 });
+check('亮面暗面合并成一块', sh.clusters.length === 3, '拆出 ' + sh.clusters.length + ' 块：' + sh.clusters.map(c => c.hex).join(' '));
+const redBlock = sh.clusters.filter(c => c.lab[1] > 30)[0];
+check('合并后记录明度跨度', redBlock && redBlock.lMax - redBlock.lMin > 10, redBlock ? 'L ' + redBlock.lMin + '–' + redBlock.lMax : 'none');
+check('代表色取受光面', redBlock && E.labOfHex(redBlock.hex)[0] > 40, redBlock ? redBlock.hex + ' L*=' + E.labOfHex(redBlock.hex)[0].toFixed(0) : 'none');
+
+
+console.log('\n[17] 光源估计');
+const warmWhite = [];
+for (let i = 0; i < 2000; i++) warmWhite.push([232, 214, 190]);
+const g = E.shadesOfGray(warmWhite, 6);
+check('暖光下估出偏蓝的补偿', g[2] > g[0], g.map(x => x.toFixed(2)).join(', '));
+
+const fixed = E.analyzeImage(warmWhite, { k: 3, gain: g });
+check('补偿后白纸变中性', Math.hypot(fixed.clusters[0].lab[1], fixed.clusters[0].lab[2]) < 2,
+  fixed.clusters[0].hex + ' C*=' + Math.hypot(fixed.clusters[0].lab[1], fixed.clusters[0].lab[2]).toFixed(1));
+
+const raw = E.analyzeImage(warmWhite, { k: 3 });
+check('不补偿则明显偏黄', Math.hypot(raw.clusters[0].lab[1], raw.clusters[0].lab[2]) > 8,
+  raw.clusters[0].hex);
+
+const g2 = E.wbGain([232, 214, 190]);
+check('手动白点也能算出增益', g2 && g2[2] > g2[0], g2 ? g2.map(x => x.toFixed(2)).join(', ') : 'null');
+
+
+console.log('\n[18] 漆面感（参考值）');
+function grad(a, b, n) {
+  const s = [];
+  for (let i = 0; i < n; i++) {
+    const k = i / (n - 1);
+    s.push([Math.round(a[0] + (b[0] - a[0]) * k), Math.round(a[1] + (b[1] - a[1]) * k), Math.round(a[2] + (b[2] - a[2]) * k)]);
+  }
+  return s;
+}
+const solidG = E.analyzeImage(grad([110, 28, 28], [215, 62, 62], 60), { k: 3 });
+check('纯明暗的实色判为实色', solidG.clusters[0].sheen === '实色',
+  solidG.clusters[0].hex + ' Δh=' + solidG.clusters[0].dHue.toFixed(1));
+
+const pearlG = E.analyzeImage(grad([120, 45, 95], [230, 190, 110], 60), { k: 3 });
+check('随角异色会被标出来', pearlG.clusters.some(c => c.sheen !== '实色'),
+  pearlG.clusters.map(c => c.hex + ':' + c.sheen).join(' '));
+check('给出可解释的数值', pearlG.clusters.every(c => typeof c.dHue === 'number' && typeof c.cRatio === 'number'),
+  'Δh ' + pearlG.clusters[0].dHue.toFixed(0) + '°');
+
+
+console.log('\n[19] 漆种与金属命名');
+check('浅金判成香槟金', E.metalName(E.labOfHex('#F8DD81')) === '香槟金', E.metalName(E.labOfHex('#F8DD81')));
+check('棕金判成古铜', E.metalName(E.labOfHex('#A76938')) === '古铜色', E.metalName(E.labOfHex('#A76938')));
+check('银灰判成枪铁', E.metalName(E.labOfHex('#8A8A8E')) === '枪铁色', E.metalName(E.labOfHex('#8A8A8E')));
+
+const metalOnly = E.nearestPaint('#F8DD81', 'metal');
+check('指定金属时只从金属漆里挑', metalOnly.pigment.kind === 'metal', metalOnly.pigment.code + ' ' + metalOnly.pigment.name);
+
+const clearOnly = E.nearestPaint('#F8DD81', 'clear');
+check('指定透明时只从透明漆里挑', clearOnly.pigment.kind === 'clear', clearOnly.pigment.code + ' ' + clearOnly.pigment.name);
+
+const anyKind = E.nearestPaint('#F8DD81');
+check('不指定就全库找', !!anyKind && anyKind.pigment.kind !== undefined, anyKind.pigment.code);
+
+
+console.log('\n[20] 两点判金属');
+const jm1 = E.judgeMetallic([220, 222, 228], [120, 122, 128]);
+check('高光带色判金属', jm1.kind === 'metal', jm1.verdict + ' ΔL=' + jm1.dL.toFixed(0));
+
+const jm2 = E.judgeMetallic([252, 252, 250], [200, 198, 192]);
+check('高光发白判光泽实色', jm2.kind === 'solid', jm2.verdict);
+
+const jm3 = E.judgeMetallic([150, 150, 148], [140, 140, 138]);
+check('没高光就说判不了', jm3.verdict.indexOf('没有明显高光') >= 0, jm3.verdict);
+
+const jm4 = E.judgeMetallic([230, 90, 80], [140, 40, 35]);
+check('金属红也认', jm4.kind === 'metal', jm4.verdict);
+
+console.log('\n[21] 页面引用一致性');
+const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+const used = new Set([
+  ...[...app.matchAll(/\$\('([^']+)'\)/g)].map(m => m[1]),
+  ...[...app.matchAll(/getElementById\('([^']+)'\)/g)].map(m => m[1])
+]);
+const missing = [...used].filter(id => !htmlIds.has(id));
+check('app.js 引用的 id 都存在', missing.length === 0, missing.length ? '缺失: ' + missing.join(', ') : used.size + ' 个 id');
+check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js"><\/script>/.test(html));
+check('index.html 引入 engine.js/app.js', /engine\.js/.test(html) && /app\.js/.test(html));
+check('同目录有 spectral.js', fs.existsSync(path.join(__dirname, 'spectral.js')));
+
+console.log('\n[22] 性能');
+const t0 = Date.now();
+for (let i = 0; i < 10; i++) {
+  E.solve({ targetHex: '#B79764', pigmentIds: BASIC, total: 20 });
+}
+const avg = (Date.now() - t0) / 10;
+check('7 支漆单次求解 < 300ms', avg < 300, `平均 ${avg.toFixed(0)}ms（最慢单次 ${slowest}ms）`);
+
+console.log(`\n===== ${pass} 通过 / ${fail} 失败 =====\n`);
+process.exit(fail ? 1 : 0);

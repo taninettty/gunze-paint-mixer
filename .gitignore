@@ -1,0 +1,11 @@
+﻿node_modules/
+*.log
+.DS_Store
+Thumbs.db
+
+# 调试用的临时文件
+_*.html
+_*.js
+shot-*.png
+uitest*.html
+dom.txt
