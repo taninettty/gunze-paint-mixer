@@ -409,6 +409,11 @@ check('README 没写旧总数', !stale || Number(stale[1]) === E.PIGMENTS.length
 const engineSrc = fs.readFileSync(path.join(__dirname, "engine.js"), "utf8");
 check('engine.js 注释没有旧数字', engineSrc.indexOf("209 支") < 0, 'clean');
 
+check('阈值集中在 TUNING', /var TUNING = \{/.test(engineSrc) && /TUNING\.LAB_L_WEIGHT/.test(engineSrc),
+  'engine.js 顶部有 TUNING 对象');
+check('浏览器端没有 const/let', !/\b(const|let)\b/.test(fs.readFileSync(path.join(__dirname, "app.js"), "utf8")),
+  'app.js 是 ES5');
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

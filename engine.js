@@ -14,6 +14,38 @@
   'use strict';
 
   // ------------------------------------------------------------------
+  // 调参总表
+  //
+  // 所有"手感"相关的阈值都集中在这里。改之前先想清楚要动哪一头：
+  // 调大 = 更宽松/更保守（取决于条目），每条都写了方向。
+  // ------------------------------------------------------------------
+  var TUNING = {
+    // —— 聚类 ——
+    LAB_L_WEIGHT: 0.35,        // 明度在"颜色距离"里占的权重。调大→更看重明暗，调小→更看重色相
+    KMEANS_ITERS: 12,          // k-means 迭代上限。调大更精确但更慢
+    HUE_MERGE_DEG: 12,         // 色相相差多少度以内算同一块。调大→色块更少更干净，调小→分得更细
+
+    // —— 色块筛选 ——
+    MIN_SHARE: 0.0015,         // 面积下限（占比）。低于它、且不够艳的块会被丢掉
+    MIN_CHROMA: 18,            // 彩度下限：够艳的小块即使面积小也保留（金边、蓝标识）
+    NEUTRAL_CHROMA: 10,        // 低于这个彩度算中性色（白灰黑），合并更宽容
+    NEUTRAL_MERGE_DE: 5,       // 中性色之间的合并容差（ΔE）
+    COLOR_MERGE_DE: 3.5,       // 有彩色块之间的合并容差（ΔE）
+
+    // —— 点缀色（主色解释不了的像素）——
+    ACCENT_RESIDUAL_DE: 14,    // 离最近主色超过多少 ΔE 才算"解释不了"。调小→更多小色块，也更容易把噪点算进来
+    ACCENT_MIN_SHARE: 0.0008,  // 点缀色最小面积占比
+
+    // —— 求解器 ——
+    HINT_DE: 3.5,              // 单支漆就能到这个 ΔE 以内时，提示"直接买这支"
+
+    // —— 出量 ——
+    DROP_ML: 0.04              // 一滴按多少毫升算。0.04 = 郡士滴管的常见口径
+  };
+
+
+
+  // ------------------------------------------------------------------
   // 依赖注入（延迟加载，方便单测时手动替换）
   // ------------------------------------------------------------------
   var cachedLib = null;
@@ -517,7 +549,7 @@
     // ---- 失败诊断：与其猜，不如真算一遍“补一支会怎样” ----
     var hint = null;
 
-    if (result.de > 3.5 && !opts._noHint) {
+    if (result.de > TUNING.HINT_DE && !opts._noHint) {
       // 1) 白基漆是不是加多了
       if (baseShare > 0) {
         var alt0 = solve({
@@ -765,14 +797,14 @@
 
 var assign = new Array(pts.length).fill(0);
 
-    for (var iter = 0; iter < 12; iter++) {
+    for (var iter = 0; iter < TUNING.KMEANS_ITERS; iter++) {
       var changed = false;
 
       for (var p = 0; p < pts.length; p++) {
         var best = 0;
         var bestD = Infinity;
         for (var c2 = 0; c2 < centers.length; c2++) {
-          var dL = (pts[p].lab[0] - centers[c2][0]) * 0.35;
+          var dL = (pts[p].lab[0] - centers[c2][0]) * TUNING.LAB_L_WEIGHT;
           var da = pts[p].lab[1] - centers[c2][1];
           var db = pts[p].lab[2] - centers[c2][2];
           var d = dL * dL + da * da + db * db;
@@ -900,7 +932,7 @@ var assign = new Array(pts.length).fill(0);
         if (dh > 180) dh = 360 - dh;
 
         // 同一支漆的亮面和暗面：色相几乎不变，只是明度和彩度在变
-        if (dh < 12) { hit = mm; break; }
+        if (dh < TUNING.HUE_MERGE_DEG) { hit = mm; break; }
       }
 
       if (!hit) { merged.push(c); return; }
@@ -921,7 +953,7 @@ var assign = new Array(pts.length).fill(0);
 
     clusters = merged.filter(function (c) {
       var chroma = Math.hypot(c.lab[1], c.lab[2]);
-      return c.share >= 0.0015 || chroma >= 18;   // 小面积但鲜艳的（金色、蓝色标记）也留着
+      return c.share >= TUNING.MIN_SHARE || chroma >= TUNING.MIN_CHROMA;   // 小面积但鲜艳的（金色、蓝色标记）也留着
     });
 
     // 再并一次“看起来根本是同一个色”的块：
@@ -930,7 +962,7 @@ var assign = new Array(pts.length).fill(0);
     clusters.forEach(function (c) {
       var hit = null;
       var cChroma = Math.hypot(c.lab[1], c.lab[2]);
-      var tol = cChroma < 10 ? 5 : 3.5;
+      var tol = cChroma < TUNING.NEUTRAL_CHROMA ? TUNING.NEUTRAL_MERGE_DE : TUNING.COLOR_MERGE_DE;
 
       for (var u = 0; u < uniq.length; u++) {
         if (deltaE00(c.lab, uniq[u].lab) < tol) { hit = uniq[u]; break; }
@@ -960,13 +992,13 @@ var assign = new Array(pts.length).fill(0);
     for (var rp = 0; rp < pts.length; rp++) {
       var minD = Infinity;
       for (var rc = 0; rc < clusters.length; rc++) {
-        var dl2 = (pts[rp].lab[0] - clusters[rc].lab[0]) * 0.35;
+        var dl2 = (pts[rp].lab[0] - clusters[rc].lab[0]) * TUNING.LAB_L_WEIGHT;
         var da2 = pts[rp].lab[1] - clusters[rc].lab[1];
         var db2 = pts[rp].lab[2] - clusters[rc].lab[2];
         var dd2 = dl2 * dl2 + da2 * da2 + db2 * db2;
         if (dd2 < minD) minD = dd2;
       }
-      if (minD > 14 * 14) residual.push(rp);
+      if (minD > TUNING.ACCENT_RESIDUAL_DE * TUNING.ACCENT_RESIDUAL_DE) residual.push(rp);
     }
 
     var accents = [];
@@ -1008,7 +1040,7 @@ var assign = new Array(pts.length).fill(0);
 
       [[rc1, g1], [rc2, g2]].forEach(function (pair) {
         var group = pair[1];
-        if (group.length < pts.length * 0.0008) return;
+        if (group.length < pts.length * TUNING.ACCENT_MIN_SHARE) return;
 
         var labA = pair[0];
         var rgbA = labToSrgb(labA);
@@ -1435,7 +1467,7 @@ var assign = new Array(pts.length).fill(0);
   }
 
   /** 一滴大约多少毫升 */
-  var DROP_ML = 0.04;
+  var DROP_ML = TUNING.DROP_ML;
 
   /**
    * 主料按毫升、微调按滴的双层配方。

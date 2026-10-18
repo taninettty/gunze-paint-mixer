@@ -447,6 +447,13 @@ node test.js
 - 跨品牌（田宫、盖亚、匠域）不通用，各家的色浆强度和色相都不一样。
 - 单一漆的"着色力"差异没有建模——真实情况是 C1 白很弱、C2 黑极强，模型里这一点由 K/S 曲线的量级自动体现，但批次差异仍未覆盖。
 
+## 代码约定
+
+- **浏览器端只用 ES5**（var + IIFE + 无构建），保证双击 index.html 就能跑
+- **test.js 可以用现代语法**，它只在 Node 里跑
+- 所有阈值集中在 `engine.js` 顶部的 `TUNING` 对象，改手感不用满文件找
+- 提交前跑 `node test.js`，CI 也会跑
+
 ## 许可
 
 MIT。光谱数据来自 [spectral.js](https://github.com/rvanwijnen/spectral.js)（MIT），漆色数据整理自郡士公开色表，仅供调色参考。
