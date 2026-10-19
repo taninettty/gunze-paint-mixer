@@ -22,6 +22,9 @@ jobs:
       - name: 冒烟测试（真浏览器）
         run: node uitest.js
 
+      - name: 端到端测试（功能）
+        run: node e2e.js
+
       - name: 检查页面引用的文件都在
         run: |
           for f in index.html app.js engine.js gunze-data.js spectral.js test.js; do
