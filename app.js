@@ -1141,14 +1141,14 @@
     var drag = null;
     var skipClick = false;
 
-    $('photoCanvas').addEventListener('mousedown', function (ev) {
+    $('photoCanvas').addEventListener('pointerdown', function (ev) {
       if (!photo.loaded) return;
       var box = $('photoCanvas').getBoundingClientRect();
       drag = { x0: ev.clientX - box.left, y0: ev.clientY - box.top, box: box };
       $('dragBox').hidden = true;
     });
 
-    window.addEventListener('mousemove', function (ev) {
+    window.addEventListener('pointermove', function (ev) {
       if (!drag) return;
       var dx = ev.clientX - drag.box.left;
       var dy = ev.clientY - drag.box.top;
@@ -1163,7 +1163,7 @@
       db.style.height = Math.abs(dy - drag.y0) + 'px';
     });
 
-    window.addEventListener('mouseup', function (ev) {
+    window.addEventListener('pointerup', function (ev) {
       if (!drag) return;
       var d = drag;
       drag = null;
@@ -1246,6 +1246,16 @@
     var url = URL.createObjectURL(file);
     var img = new Image();
 
+    img.onerror = function () {
+      var t = $('resultTitle');
+      if (t) {
+        t.hidden = false;
+        t.textContent = '这张图打不开：可能是 iPhone 的 HEIC 格式。换成 JPG / PNG 再试一次。';
+      }
+      var lb = $('lightBar');
+      if (lb) lb.hidden = true;
+    };
+
     img.onload = function () {
       // 统一显示尺寸：小图放大、大图缩小，都装进同一个框
       var boxW = 1000;
@@ -1262,6 +1272,7 @@
       cv.getContext('2d').drawImage(img, 0, 0, w, h);
 
       photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+
       photo.mark = null;
       photo.marks = [];
       photo.kindOverride = {};

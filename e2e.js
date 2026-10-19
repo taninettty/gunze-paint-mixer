@@ -168,9 +168,12 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message); }
     // 拖框
     var cv = document.getElementById('photoCanvas');
     var r = cv.getBoundingClientRect();
-    cv.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: r.left + 20, clientY: r.top + 20 }));
-    window.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: r.left + 120, clientY: r.top + 100 }));
-    window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: r.left + 120, clientY: r.top + 100 }));
+    function pe(target, type, x, y) {
+      target.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: 'mouse', isPrimary: true }));
+    }
+    pe(cv, 'pointerdown', r.left + 20, r.top + 20);
+    pe(window, 'pointermove', r.left + 120, r.top + 100);
+    pe(window, 'pointerup', r.left + 120, r.top + 100);
     await sleep(600);
     set('markCardShown', !document.getElementById('markCard').hidden);
 
