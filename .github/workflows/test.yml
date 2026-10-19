@@ -19,6 +19,9 @@ jobs:
       - name: 跑测试
         run: node test.js
 
+      - name: 冒烟测试（真浏览器）
+        run: node uitest.js
+
       - name: 检查页面引用的文件都在
         run: |
           for f in index.html app.js engine.js gunze-data.js spectral.js test.js; do

@@ -452,6 +452,28 @@ check('中性光不偏', neutralL.label === '接近中性', neutralL.label + ' '
 check('暖光比冷光低', warmL.cct < coolL.cct - 2000, warmL.cct + ' vs ' + coolL.cct);
 check('给出光源色块', /^#[0-9A-F]{6}$/i.test(warmL.swatch), warmL.swatch);
 
+console.log('\n[27] 知识内容结构');
+const kbs = fs.readFileSync(path.join(__dirname, 'kb-data.js'), 'utf8');
+const secs = {};
+let mm;
+const re = /^\s*(airbrush|spray|fail): \x60([\s\S]*?)\x60\s*,?\s*$/gm;
+while ((mm = re.exec(kbs))) secs[mm[1]] = mm[2];
+
+function count(s, re2) { return (s.match(re2) || []).length; }
+
+check('三个块都解析出来了', Object.keys(secs).length === 3, Object.keys(secs).join(','));
+for (const key of ['airbrush', 'spray', 'fail']) {
+  const body = secs[key] || '';
+  const okDiv = count(body, /<div\b/g) === count(body, /<\/div>/g);
+  const okArt = count(body, /<article\b/g) === count(body, /<\/article>/g);
+  const okSvg = count(body, /<svg\b/g) === count(body, /<\/svg>/g);
+  check(key + ' 标签闭合', okDiv && okArt && okSvg,
+    'div ' + count(body, /<div\b/g) + '/' + count(body, /<\/div>/g) +
+    ' · svg ' + count(body, /<svg\b/g) + '/' + count(body, /<\/svg>/g));
+}
+check('翻车急救共 12 张卡（8 缺陷 + 4 正常漆面）', count(secs.fail || '', /<article\b/g) === 12, count(secs.fail || '', /<article\b/g) + ' 张');
+check('内容里没有脚本', !/<script/i.test(kbs), 'clean');
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

@@ -675,7 +675,7 @@ var KB_DATA = {
           储气罐相当于一个水库，把抖动吃掉。贵一百块也优先买带罐的。
         </p>
       </div>
-    </div>`,
+    `,
 
   spray: `<div class="sd-nav">
       <button type="button" data-anchor="sd-thin">稀释</button>
