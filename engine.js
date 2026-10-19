@@ -1563,6 +1563,45 @@ var assign = new Array(pts.length).fill(0);
       }
     });
 
+    // ---- 第三段：主料之外，允许再引入一支"点缀" ----
+    // 例：偏青的白 = 白 100% + 一两滴蓝。以前的候选只来自精确解的前几名，
+    // 蓝这种"不加到主料、但能改色相"的漆永远进不来。
+    (function () {
+      var used = {};
+      bulkList.concat(traceList).forEach(function (l) { used[l.pigment.code] = true; });
+
+      var cands = [];
+      (opts.pigmentIds || []).forEach(function (id) {
+        if (used[id]) return;
+        var pig = null;
+        for (var i = 0; i < PIGMENTS.length; i++) if (PIGMENTS[i].code === id) pig = PIGMENTS[i];
+        if (pig && pig.kind !== 'additive') cands.push(pig);
+      });
+      cands = cands.slice(0, 6);
+
+      var bestExtra = null;
+
+      cands.forEach(function (pig) {
+        var ksE = paintKs(pig.hex);
+        var comps2 = comps.concat([{ ks: ksE }]);
+
+        for (var k = 1; k <= maxDrops; k++) {
+          var w2 = best.w.concat([k * DROP_ML]);
+          var de = deltaE00(measure(mixSpectrum(comps2, w2)).lab, targetLab);
+          if (bestExtra === null || de < bestExtra.de) {
+            bestExtra = { de: de, w: w2, comps: comps2, pig: pig, drops: k };
+          }
+        }
+      });
+
+      if (bestExtra && bestExtra.de < best.de - 0.05) {
+        best.de = bestExtra.de;
+        best.w = bestExtra.w;
+        comps = bestExtra.comps;
+        traceList = traceList.concat([{ pigment: bestExtra.pig }]);
+      }
+    })();
+
     if (!best.w) return { ok: false, error: '没有可用配方' };
 
     var items = [];
@@ -2434,6 +2473,27 @@ var assign = new Array(pts.length).fill(0);
     };
   }
 
+
+  /** 用一个词说清这个颜色的色调偏向（彩度太低就不说） */
+  function castName(lab) {
+    var c = Math.hypot(lab[1], lab[2]);
+    if (c < 2) return '';
+
+    var h = Math.atan2(lab[2], lab[1]) * 180 / Math.PI;
+    if (h < 0) h += 360;
+
+    if (h < 20 || h >= 330) return '偏红';
+    if (h < 50) return '偏橙';
+    if (h < 75) return '偏黄';
+    if (h < 105) return '偏黄绿';
+    if (h < 150) return '偏绿';
+    if (h < 190) return '偏青';
+    if (h < 240) return '偏蓝';
+    if (h < 280) return '偏蓝紫';
+    if (h < 310) return '偏紫';
+    return '偏品红';
+  }
+
   /** 把颜色说成金属名：香槟金、黄铜、红铜、枪铁…… */
   function metalName(lab) {
     var L = lab[0];
@@ -2471,6 +2531,7 @@ var assign = new Array(pts.length).fill(0);
     solve: solve,
     nearestPaint: nearestPaint,
     estimateLight: estimateLight,
+    castName: castName,
     metalName: metalName,
     shadeVariants: shadeVariants,
     nearestPaints: nearestPaints,

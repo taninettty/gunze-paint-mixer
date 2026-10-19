@@ -474,6 +474,17 @@ for (const key of ['airbrush', 'spray', 'fail']) {
 check('翻车急救共 12 张卡（8 缺陷 + 4 正常漆面）', count(secs.fail || '', /<article\b/g) === 12, count(secs.fail || '', /<article\b/g) + ' 张');
 check('内容里没有脚本', !/<script/i.test(kbs), 'clean');
 
+console.log('\n[28] 点缀漆可以来自主料之外');
+const pale = E.solveMixed({ targetHex: '#EFF7F5', pigmentIds: ['C1', 'C31', 'C32', 'C5'], volume: 100 });
+const paleTrace = pale.items.filter(function (i) { return i.kind === 'trace' && i.drops > 0; });
+check('偏青的白会加蓝', paleTrace.length > 0 && paleTrace.some(function (i) { return i.pigment.code === 'C5'; }),
+  pale.items.map(function (i) { return i.pigment.code + (i.drops ? '(' + i.drops + '滴)' : ''); }).join(' / '));
+check('加了之后明显更准', pale.deltaE < 2, 'ΔE ' + pale.deltaE.toFixed(2));
+
+const noBlue = E.solveMixed({ targetHex: '#EFF7F5', pigmentIds: ['C1', 'C31', 'C32'], volume: 100 });
+check('没勾蓝就只用白灰', noBlue.items.length === 1 && noBlue.items[0].pigment.code === 'C1',
+  noBlue.items.map(function (i) { return i.pigment.code; }).join(' / '));
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

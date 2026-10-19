@@ -420,8 +420,10 @@
     $('chipTarget').style.background = n;
 
     var lab = E.labOfHex(n);
+        var cast = E.castName(lab);
     $('hueHint').textContent = 'L* ' + lab[0].toFixed(0) +
-      ' · C* ' + Math.hypot(lab[1], lab[2]).toFixed(0);
+      ' · C* ' + Math.hypot(lab[1], lab[2]).toFixed(0) +
+      (cast ? ' · ' + cast : '');
 
     var badge = $('targetKind');
     if (badge) {
@@ -967,7 +969,16 @@
       notes.push(res.missingHue);
     }
     if (!res.predicted.inGamut) notes.push('结果超出屏幕能显示的范围（sRGB 色域），实物可能更鲜艳。');
-    if (!notes.length && res.deltaE > 0.6) notes.push('想更贴近，可以多勾一两支邻近色相的郡士色。');
+    if (!notes.length && res.deltaE > 1.2) {
+      var add = bestMissingPigment(res, state.selected);
+      var castOfTarget = E.castName(E.labOfHex(res.target.hex));
+      if (add) {
+        notes.push('目标是' + (castOfTarget || '这个色') + '，现在差 ' + res.deltaE.toFixed(1) +
+          '；再勾上 ' + add.code + ' ' + add.name + ' 能到 ' + add.de.toFixed(1) + '。');
+      } else {
+        notes.push('想更贴近，可以多勾一两支邻近色相的郡士色。');
+      }
+    }
 
     $('note').className = 'note' + (res.missingHue && !(near && near.deltaE < 0.5) ? ' warn' : '');
     $('note').textContent = notes.join(' ');
@@ -1777,6 +1788,56 @@
   document.addEventListener('contextmenu', function (ev) {
     if (!ev.target.closest('.cc')) $('ctxMenu').hidden = true;
   });
+
+  /** 试一下：再加一支没勾的漆，看能不能明显变准 */
+  function finishOf(p) {
+    var n = (p.note || '') + (p.name || '');
+    if (n.indexOf('消光') >= 0) return 'matte';
+    if (n.indexOf('半光') >= 0) return 'semi';
+    if (n.indexOf('光泽') >= 0) return 'gloss';
+    return '';
+  }
+
+  function bestMissingPigment(res, selected) {
+    var bulkFinish = res.items.length ? finishOf(res.items[0].pigment) : '';
+    var targetLab = E.labOfHex(res.target.hex);
+    var targetHue = Math.atan2(targetLab[2], targetLab[1]) * 180 / Math.PI;
+
+    var pool = E.PIGMENTS.filter(function (p) {
+      if (selected.indexOf(p.code) >= 0) return false;
+      if (p.kind !== 'solid' && p.kind !== 'pearl') return false;
+      var lab = E.labOfHex(p.hex);
+      return Math.hypot(lab[1], lab[2]) > 8;
+    }).map(function (p) {
+      var lab = E.labOfHex(p.hex);
+      var h = Math.atan2(lab[2], lab[1]) * 180 / Math.PI;
+      var d = Math.abs(h - targetHue);
+      if (d > 180) d = 360 - d;
+      return { p: p, dist: d, sameFinish: !bulkFinish || finishOf(p) === bulkFinish };
+    }).sort(function (x, y) { return x.dist - y.dist; });
+
+    function tryList(list) {
+      var best = null;
+      list.slice(0, 5).forEach(function (c) {
+        var r = null;
+        try {
+          r = E.solveMixed({
+            targetHex: res.target.hex,
+            pigmentIds: selected.concat([c.p.code]),
+            volume: 100
+          });
+        } catch (err) { r = null; }
+        if (!r || !r.ok) return;
+        if (!best || r.deltaE < best.de) best = { code: c.p.code, name: c.p.name, de: r.deltaE };
+      });
+      return best && best.de < res.deltaE - 0.8 ? best : null;
+    }
+
+    // 先只从"同光泽"里挑，实在没有再看别的
+    var same = pool.filter(function (x) { return x.sameFinish; });
+    var other = pool.filter(function (x) { return !x.sameFinish; });
+    return tryList(same) || tryList(other);
+  }
 
   function renderList() {
     var list = $('clusterList');
