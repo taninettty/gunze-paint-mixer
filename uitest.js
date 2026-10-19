@@ -107,7 +107,7 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message + '
 function buildProbePage() {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const stamp = Date.now();
-  const versioned = html.replace(/(src="[a-z-]+\.js)"/g, `$1?v=${stamp}"`);
+  const versioned = html.replace(/(src="[a-z-]+\.js)(\?[^"]*)?"/g, `$1?v=${stamp}"`);
   const file = path.join(os.tmpdir(), `tint-smoke-${stamp}.html`);
   // 探针页放在仓库目录下，相对路径才找得到 js
   const local = path.join(ROOT, `.smoke-${stamp}.html`);

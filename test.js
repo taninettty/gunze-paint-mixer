@@ -389,7 +389,7 @@ const used = new Set([
 ]);
 const missing = [...used].filter(id => !htmlIds.has(id));
 check('app.js 引用的 id 都存在', missing.length === 0, missing.length ? '缺失: ' + missing.join(', ') : used.size + ' 个 id');
-check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js"><\/script>/.test(html));
+check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js(\?[^"]*)?"><\/script>/.test(html));
 check('index.html 引入 engine.js/app.js', /engine\.js/.test(html) && /app\.js/.test(html));
 check('同目录有 spectral.js', fs.existsSync(path.join(__dirname, 'spectral.js')));
 check('知识内容已外置', kbSrc.length > 20000 && kbSrc.indexOf('KB_DATA') >= 0, kbSrc ? Math.round(kbSrc.length / 1024) + ' KB' : '缺失');

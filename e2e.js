@@ -195,7 +195,7 @@ function buildProbePage() {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   const stamp = Date.now();
   const page = path.join(ROOT, `.e2e-${stamp}.html`);
-  fs.writeFileSync(page, html.replace(/(src="[a-z-]+\.js)"/g, `$1?v=${stamp}"`).replace('</body>', PROBE + '</body>'), 'utf8');
+  fs.writeFileSync(page, html.replace(/(src="[a-z-]+\.js)(\?[^"]*)?"/g, `$1?v=${stamp}"`).replace('</body>', PROBE + '</body>'), 'utf8');
   return page;
 }
 

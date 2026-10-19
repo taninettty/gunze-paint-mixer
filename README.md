@@ -515,7 +515,14 @@ node e2e.js      # 端到端：22 条，真的点功能
 2. `node test.js`（150 项）+ `node uitest.js`（11 条）都要绿
 3. `git push` → CI 跑测试 → Pages 一分钟内自动更新
 
-发新版时：更新 `CHANGELOG.md`、改页脚版本号、`git tag vX.Y`。
+发新版时：
+
+1. 更新 `CHANGELOG.md`
+2. 改页脚版本号
+3. **把四个 `<script src="...?v=1.1">` 改成新版本号**（不改的话，浏览器会拿缓存里的旧脚本）
+4. `git tag vX.Y && git push --tags`
+
+GitHub Pages 给所有文件设了 `max-age=600`，也就是最多缓存 10 分钟。发版后如果看到旧页面，强制刷新（Ctrl/Cmd + Shift + R）或者等十分钟。
 
 ## 许可
 
