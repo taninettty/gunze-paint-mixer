@@ -502,6 +502,18 @@ node uitest.js   # 冒烟测试：真浏览器跑一遍页面
 - 所有阈值集中在 `engine.js` 顶部的 `TUNING` 对象，改手感不用满文件找
 - 提交前跑 `node test.js`，CI 也会跑
 
+## 版本与维护
+
+当前版本 **v1.0**（2026-10），功能冻结：之后只修错，不加功能。下一版规划见 `CHANGELOG.md`。
+
+维护者：社团负责人。改动流程：
+
+1. 改内容 → `kb-data.js`；改逻辑 → `app.js` / `engine.js`
+2. `node test.js`（147 项）+ `node uitest.js`（11 条）都要绿
+3. `git push` → CI 跑测试 → Pages 一分钟内自动更新
+
+发新版时：更新 `CHANGELOG.md`、改页脚版本号、`git tag vX.Y`。
+
 ## 许可
 
 MIT。光谱数据来自 [spectral.js](https://github.com/rvanwijnen/spectral.js)（MIT），漆色数据整理自郡士公开色表，仅供调色参考。

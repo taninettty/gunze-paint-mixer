@@ -324,6 +324,11 @@
   .note:empty { display: none; }
   .note.warn { background: #FDF6E7; border-left-color: var(--warn); }
 
+  .ver {
+    display: inline-block; margin-bottom: 8px; padding: 2px 8px;
+    border-radius: 999px; background: #EFEAE0; color: var(--ink-3);
+    font-size: 10.5px; letter-spacing: .04em;
+  }
   footer {
     padding: 0 26px 34px; font-size: 11.5px;
     color: var(--ink-3); line-height: 1.7; max-width: 900px;
@@ -1075,6 +1080,7 @@
 
 
 <footer>
+  <span class="ver" id="appVer">v1.0 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
