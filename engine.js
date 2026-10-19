@@ -2337,95 +2337,81 @@ var assign = new Array(pts.length).fill(0);
    * 冷暖的差别是**色相**，不是明度：把色相往"冷极"（青蓝 200°/270°）
    * 或"暖极"（红橙 10°/40°）转一段，冷阴影与暖阴影相差 60° 以上。
    */
-  function shadeVariants(hex) {
+function shadeVariants(hex) {
     var lab = labOfHex(hex);
     var baseC = Math.hypot(lab[1], lab[2]);
+    var baseH = hueAngle(lab);
 
-    function hueOf(a, b) {
-      var h = Math.atan2(b, a) * 180 / Math.PI;
-      return (h + 360) % 360;
-    }
-
-    function circ(from, to) {
-      var d = ((to - from + 540) % 360) - 180;
-      return d;
-    }
-
-    function nearestPole(h, poles) {
-      var best = poles[0], bd = 1e9;
-      for (var i = 0; i < poles.length; i++) {
-        var d = Math.abs(circ(h, poles[i]));
-        if (d < bd) { bd = d; best = poles[i]; }
-      }
-      return best;
-    }
-
-    function rotateLab(L, a, b, deg, cScale) {
-      var r = deg * Math.PI / 180;
-      var c = Math.cos(r), s = Math.sin(r);
-      var na = a * c - b * s;
-      var nb = a * s + b * c;
-      return [L, na * cScale, nb * cScale];
-    }
+    function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+    function circ(from, to) { return ((to - from + 540) % 360) - 180; }
 
     function toHex(L, a, b) {
       var rgb = labToSrgb([L, Math.max(-128, Math.min(127, a)), Math.max(-128, Math.min(127, b))]);
       return rgbToHex(rgb[0], rgb[1], rgb[2]);
     }
 
-    // 阴影：往冷极或暖极转
-    function shadow(warm) {
-      var L = Math.max(6, Math.min(96, lab[0] - 15));
+    // 中性色没有色相，给固定色偏（a, b）
+    var NEUTRAL = {
+      hi: [0, -2],
+      'hi-warm': [3, 5],
+      sh: [0, 0],
+      'sh-warm': [6, 7],
+      'sh-cool': [-5, -9],
+      'sh-violet': [6, -8]
+    };
 
-      // 中性色没有色相可转，直接给一个色偏
-      if (baseC < 8) {
-        var ca = warm ? 10 : -6;
-        var cb = warm ? 6 : -10;
-        return { hex: toHex(L, ca, cb), lab: [L, ca, cb] };
+    function build(id, name, dL, cScale, targetHue, blend, note) {
+      var L = clamp(lab[0] + dL, 5, 97);
+      var a, b;
+
+      if (baseC < 6) {
+        var n = NEUTRAL[id];
+        var k = Math.min(1, Math.max(0.35, (L + 8) / 100));
+        a = n[0] * k;
+        b = n[1] * k;
+      } else {
+        var C = baseC * cScale;
+        var h = targetHue == null ? baseH : baseH + circ(baseH, targetHue) * blend;
+        var r = h * Math.PI / 180;
+        a = C * Math.cos(r);
+        b = C * Math.sin(r);
       }
 
-      var h = hueOf(lab[1], lab[2]);
-      var pole = warm ? nearestPole(h, [40, 10]) : nearestPole(h, [270, 200]);
-      var deg = circ(h, pole) * 0.45;
-      if (Math.abs(deg) < 15) deg = deg < 0 ? -15 : 15;
-
-      var v = rotateLab(L, lab[1], lab[2], deg, warm ? 1.05 : 0.9);
-      return { hex: toHex(v[0], v[1], v[2]), lab: v, deg: deg };
+      return { id: id, name: name, hex: toHex(L, a, b), lab: [L, a, b], note: note };
     }
 
-    // 高光：提亮为主，色相最多轻推
-    function highlight(warm) {
-      var L = Math.max(6, Math.min(96, lab[0] + (warm ? 12 : 13)));
-      if (baseC < 8) return { hex: toHex(L, warm ? 4 : 0, warm ? 4 : -2), lab: [L, warm ? 4 : 0, warm ? 4 : -2] };
-
-      var h = hueOf(lab[1], lab[2]);
-      var pole = warm ? nearestPole(h, [40, 10]) : h;
-      var deg = warm ? circ(h, pole) * 0.25 : 0;
-      var v = rotateLab(L, lab[1], lab[2], deg, warm ? 0.9 : 0.86);
-      return { hex: toHex(v[0], v[1], v[2]), lab: v, deg: deg };
-    }
-
-    var hi = highlight(false);
-    var hiWarm = highlight(true);
-    var sh = shadow(false);
-    var shWarm = shadow(true);
-
-    // 有明确色相时，"阴影"单独一档：只压暗不改色
-    var shPlain = (function () {
-      var L = Math.max(6, Math.min(96, lab[0] - 14));
-      var v = [L, lab[1] * 1.02, lab[2] * 1.02];
-      return { hex: toHex(v[0], v[1], v[2]), lab: v };
-    })();
-
-    return [
-      { id: 'hi', name: '高光', note: '只提亮，色相不动', hex: hi.hex, lab: hi.lab },
-      { id: 'hi-warm', name: '暖高光', note: '提亮并往暖端轻推', hex: hiWarm.hex, lab: hiWarm.lab },
-      { id: 'sh', name: '阴影', note: '只压暗，色相不动', hex: shPlain.hex, lab: shPlain.lab },
-      { id: 'sh-cool', name: '冷阴影', note: '色相往冷端转 ' + Math.abs(Math.round(sh.deg || 0)) + '°', hex: sh.hex, lab: sh.lab },
-      { id: 'sh-warm', name: '暖阴影', note: '色相往暖端转 ' + Math.abs(Math.round(shWarm.deg || 0)) + '°', hex: shWarm.hex, lab: shWarm.lab }
+    // 六种自然选择：两档高光 + 四档阴影
+    var list = [
+      build('hi', '高光', 13, 0.88, 90, 0.05, '提亮，稍微向光色靠'),
+      build('hi-warm', '暖高光', 12, 0.92, 70, 0.18, '提亮并往暖端靠'),
+      build('sh', '阴影', -14, 0.86, null, 0, '压暗，饱和降一档'),
+      build('sh-warm', '暖阴影', -15, 0.90, 55, 0.22, '压暗并往橙棕方向'),
+      build('sh-cool', '冷阴影', -16, 0.80, 250, 0.18, '压暗并往冷端靠'),
+      build('sh-violet', '紫阴影', -16, 0.72, 315, 1, '压暗并偏向紫（补色常用的那一档）')
     ];
-  }
 
+    // 保证每张卡都看得出差别
+    for (var i = 1; i < list.length; i++) {
+      for (var t = 0; t < 4; t++) {
+        var minDe = Infinity;
+        for (var j = 0; j < i; j++) {
+          var d = deltaE00(list[i].lab, list[j].lab);
+          if (d < minDe) minDe = d;
+        }
+        if (minDe >= 3) break;
+
+        var L2 = clamp(list[i].lab[0] - 3, 5, 97);
+        var a2 = list[i].lab[1] * 1.05;
+        var b2 = list[i].lab[2] * 1.05;
+        list[i] = {
+          id: list[i].id, name: list[i].name, note: list[i].note,
+          hex: toHex(L2, a2, b2), lab: [L2, a2, b2]
+        };
+      }
+    }
+
+    return list;
+  }
 
   /**
    * 从白平衡增益反推光源色温（McCamy 近似）。
@@ -2479,22 +2465,23 @@ var assign = new Array(pts.length).fill(0);
     var c = Math.hypot(lab[1], lab[2]);
     if (c < 2) return '';
 
+    // Lab 里的真实位置：红 40 / 橙 60 / 黄 103 / 绿 136 / 青 196 / 蓝 306 / 品红 328
     var h = Math.atan2(lab[2], lab[1]) * 180 / Math.PI;
     if (h < 0) h += 360;
 
-    if (h < 20 || h >= 330) return '偏红';
-    if (h < 50) return '偏橙';
-    if (h < 75) return '偏黄';
-    if (h < 105) return '偏黄绿';
-    if (h < 150) return '偏绿';
-    if (h < 190) return '偏青';
-    if (h < 240) return '偏蓝';
-    if (h < 280) return '偏蓝紫';
-    if (h < 310) return '偏紫';
+    if (h < 15 || h >= 350) return '偏红';
+    if (h < 55) return '偏红';
+    if (h < 75) return '偏橙';
+    if (h < 118) return '偏黄';
+    if (h < 132) return '偏黄绿';
+    if (h < 165) return '偏绿';
+    if (h < 200) return '偏青';
+    if (h < 312) return '偏蓝';
+    if (h < 320) return '偏蓝紫';
+    if (h < 327) return '偏紫';
     return '偏品红';
   }
 
-  /** 把颜色说成金属名：香槟金、黄铜、红铜、枪铁…… */
   function metalName(lab) {
     var L = lab[0];
     var chroma = Math.hypot(lab[1], lab[2]);
@@ -2507,20 +2494,14 @@ var assign = new Array(pts.length).fill(0);
 
     var h = hueAngle(lab);
 
-    if (h >= 40 && h < 75) {
-      if (L > 70) return '香槟金';
-      if (L > 55) return '黄金色';
-      return '古铜色';
-    }
-    if (h >= 75 && h < 115) {
-      if (L > 78) return '香槟金';
-      if (L > 60) return '黄金色';
-      return '黄铜色';
-    }
-    if (h >= 20 && h < 40) return '红铜色';
-    if (h >= 115 && h < 165) return '青铜色';
-    if (h >= 165 && h < 335) return '蓝钢色';
-
+    if (h < 15 || h >= 350) return '红铜色';
+    if (h < 55) return L > 62 ? '亮铜色' : '红铜色';
+    if (h < 78) return L > 66 ? '黄铜色' : '古铜色';
+    if (h < 115) return L > 78 ? '香槟金' : (L > 60 ? '黄金色' : '黄铜色');
+    if (h < 165) return '青铜色';
+    if (h < 205) return '蓝绿钢';
+    if (h < 315) return '蓝钢色';
+    if (h < 330) return '紫钢色';
     return '金属色';
   }
 

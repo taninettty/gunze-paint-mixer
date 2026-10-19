@@ -238,7 +238,7 @@ function main() {
   check('配方有行', c.recipeRows > 0, c.recipeRows + ' 行');
   check('占比合计 100%', Math.abs(c.recipePctSum - 100) < 1.5, c.recipePctSum + '%');
   check('改总量到 50ml 后毫升数跟着变', c.mlSumAt50 == null || Math.abs(c.mlSumAt50 - 50) <= 2, c.mlSumAt50 + ' ml（只算毫升行，滴不计）');
-  check('阴影卡 5 张', c.shadeCards === 5, c.shadeCards + ' 张');
+  check('阴影卡 6 张', c.shadeCards === 6, c.shadeCards + ' 张');
   check('点阴影卡会换目标色', c.shadeClickChanged === true, String(c.shadeClickChanged));
   check('工序模板 5 个', c.procTabs === 5, c.procTabs + ' 个');
   check('每个模板都有步骤', /^\d+(,\d+){4}$/.test(c.stepCounts || ''), c.stepCounts);

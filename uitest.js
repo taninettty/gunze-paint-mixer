@@ -166,7 +166,7 @@ function run() {
   check('翻车急救内容已挂载', r.fail > 1000, r.fail + ' 字符');
   check('八张缺陷卡都在', r.defects === 8, r.defects + ' 张');
   check('漆库渲染了 226 支', r.pigs === 226, r.pigs + ' 支');
-  check('阴影卡渲染了 5 张', r.shades === 5, r.shades + ' 张');
+  check('阴影卡渲染了 6 张', r.shades === 6, r.shades + ' 张');
   check('预设渲染了', r.presets > 0, r.presets + ' 个');
   check('页签能切到知识页', r.kbVisible === true, String(r.kbVisible));
   check('翻车急救子页能显示', r.failVisible === true, String(r.failVisible));

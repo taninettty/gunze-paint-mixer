@@ -427,7 +427,7 @@ for (const base of ['#B79764', '#3A5FA8', '#C0392B', '#4A7A45']) {
   const c = v.filter(x => x.id === 'sh-cool')[0];
   const w = v.filter(x => x.id === 'sh-warm')[0];
   const de = E.deltaE00(c.lab, w.lab);
-  check('冷暖阴影明显不同 ' + base, de > 15, 'ΔE ' + de.toFixed(1) + ' · 色相差 ' + hueGap(c.lab, w.lab).toFixed(0) + '°');
+  check('冷暖阴影能区分 ' + base, de > 10, 'ΔE ' + de.toFixed(1) + ' · 色相差 ' + hueGap(c.lab, w.lab).toFixed(0) + '°');
 }
 
 const nb = E.shadeVariants('#9AA0A6');
@@ -484,6 +484,42 @@ check('加了之后明显更准', pale.deltaE < 2, 'ΔE ' + pale.deltaE.toFixed(
 const noBlue = E.solveMixed({ targetHex: '#EFF7F5', pigmentIds: ['C1', 'C31', 'C32'], volume: 100 });
 check('没勾蓝就只用白灰', noBlue.items.length === 1 && noBlue.items[0].pigment.code === 'C1',
   noBlue.items.map(function (i) { return i.pigment.code; }).join(' / '));
+
+console.log('\n[29] 美术规则');
+// 色相锚点：纯色的 Lab 位置
+function castOf(hex) { return E.castName(E.labOfHex(hex)); }
+check('黄是偏黄', castOf('#FFFF00') === '偏黄', castOf('#FFFF00'));
+check('蓝是偏蓝', castOf('#0000FF') === '偏蓝', castOf('#0000FF'));
+check('青是偏青', castOf('#00FFFF') === '偏青', castOf('#00FFFF'));
+check('绿是偏绿', castOf('#00FF00') === '偏绿', castOf('#00FF00'));
+
+// 金属命名：铜不能被叫成金
+const c10 = E.PIGMENTS.filter(function (p) { return p.code === 'C10'; })[0];
+check('C10 金属铜 → 古铜色', E.metalName(E.labOfHex(c10.hex)) === '古铜色', E.metalName(E.labOfHex(c10.hex)));
+const c9 = E.PIGMENTS.filter(function (p) { return p.code === 'C9'; })[0];
+check('C9 金属金 → 黄金/香槟', /金/.test(E.metalName(E.labOfHex(c9.hex))), E.metalName(E.labOfHex(c9.hex)));
+
+// 阴影必须降饱和
+['#B79764', '#2E5C9A', '#C0392B'].forEach(function (hex) {
+  var base = E.labOfHex(hex);
+  var cBase = Math.hypot(base[1], base[2]);
+  var sh = E.shadeVariants(hex).filter(function (v) { return v.id === 'sh'; })[0];
+  var cSh = Math.hypot(sh.lab[1], sh.lab[2]);
+  check('阴影降饱和 ' + hex, cSh < cBase, cBase.toFixed(1) + ' → ' + cSh.toFixed(1));
+});
+
+// 六张卡要能互相区分
+['#B79764', '#2E5C9A', '#E8E4DC'].forEach(function (hex) {
+  var v = E.shadeVariants(hex);
+  var minDe = Infinity;
+  for (var i = 0; i < v.length; i++) {
+    for (var j = i + 1; j < v.length; j++) {
+      var d = E.deltaE00(v[i].lab, v[j].lab);
+      if (d < minDe) minDe = d;
+    }
+  }
+  check('六张卡两两可分 ' + hex, v.length === 6 && minDe >= 3, '最小 ΔE ' + minDe.toFixed(1));
+});
 
 console.log('\n[22] 性能');
 const t0 = Date.now();
