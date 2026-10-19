@@ -379,8 +379,10 @@ check('金属红也认', jm4.kind === 'metal', jm4.verdict);
 
 console.log('\n[21] 页面引用一致性');
 const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+const kbPath = path.join(__dirname, 'kb-data.js');
+const kbSrc = fs.existsSync(kbPath) ? fs.readFileSync(kbPath, 'utf8') : '';
 const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
-const htmlIds = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
+const htmlIds = new Set([...(html + kbSrc).matchAll(/\bid="([^"]+)"/g)].map(m => m[1]));
 const used = new Set([
   ...[...app.matchAll(/\$\('([^']+)'\)/g)].map(m => m[1]),
   ...[...app.matchAll(/getElementById\('([^']+)'\)/g)].map(m => m[1])
@@ -390,6 +392,8 @@ check('app.js 引用的 id 都存在', missing.length === 0, missing.length ? '�
 check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js"><\/script>/.test(html));
 check('index.html 引入 engine.js/app.js', /engine\.js/.test(html) && /app\.js/.test(html));
 check('同目录有 spectral.js', fs.existsSync(path.join(__dirname, 'spectral.js')));
+check('知识内容已外置', kbSrc.length > 20000 && kbSrc.indexOf('KB_DATA') >= 0, kbSrc ? Math.round(kbSrc.length / 1024) + ' KB' : '缺失');
+check('三个知识块都在', kbSrc.indexOf('airbrush:') > 0 && kbSrc.indexOf('spray:') > 0 && kbSrc.indexOf('fail:') > 0, 'airbrush/spray/fail');
 
 console.log('\n[23] 文档与数据一致');
 const README = fs.readFileSync(path.join(__dirname, "README.md"), "utf8");

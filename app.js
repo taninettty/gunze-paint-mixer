@@ -2187,7 +2187,18 @@
   // --------------------------------------------------------------
   // 启动
   // --------------------------------------------------------------
+  // 把 kb-data.js 里的内容挂进页面（改文案只改那个文件）
+  function mountKb() {
+    if (typeof KB_DATA === "undefined") return;
+    var map = { airbrush: "airbrush", spray: "sprayDetail", fail: "failDetail" };
+    Object.keys(map).forEach(function (k) {
+      var el = $(map[k]);
+      if (el && KB_DATA[k]) el.innerHTML = KB_DATA[k];
+    });
+  }
+
   function start() {
+    mountKb();
     initGuide();
     initNav();
     initAirbrush();
