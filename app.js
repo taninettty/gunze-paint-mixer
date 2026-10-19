@@ -70,6 +70,7 @@
   /** 卡片太窄，把 "光泽白 C1" 这类压成最好认的中文名 */
   function shortName(p) {
     var n = (p.name || p.code).replace(/\s*\(.*\)$/, '');
+    n = n.replace(/^(光泽|半光|消光)/, '');
     return n;
   }
 
@@ -597,20 +598,23 @@
       var rc = document.createElement('span');
       rc.className = 'rc';
 
-      var r = null;
+      // 配方：在底色里加多少，而不是「从头调出这个颜色」
+      var tr = null;
       try {
-        r = E.solve({ targetHex: v.hex, pigmentIds: ids, total: 20, _noHint: true });
-      } catch (err) { r = null; }
+        tr = E.tintRecipe(state.targetHex, v.hex, ids, { volume: 10 });
+      } catch (err) { tr = null; }
 
-      if (r && r.ok && r.lines.length) {
-        rc.textContent = shortName(r.lines[0].pigment) + ' ' + fmtPct(r.lines[0].percent) + '%';
-        card.title = v.note + ' · ' + r.lines.map(function (l) {
-          return l.pigment.code + ' ' + l.pigment.name;
-        }).join(' + ');
+      if (tr) {
+        var parts = tr.items.map(function (it) {
+          return shortName(it.pigment) + ' ' + it.pct + '%';
+        });
+        rc.textContent = '底 ' + tr.basePct + '% · ' + parts.join(' · ') + (tr.exact ? '' : ' ≈');
+        card.title = v.note + '\n底色 ' + tr.basePct + '%' + tr.items.map(function (it) {
+          return ' + ' + it.pigment.code + ' ' + it.pigment.name + ' ' + it.pct + '%';
+        }).join('') + '\n偏差 ΔE ' + tr.deltaE.toFixed(1);
       } else {
         rc.textContent = v.note;
       }
-
       card.appendChild(sw);
       card.appendChild(nm);
       card.appendChild(hx);

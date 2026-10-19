@@ -2473,6 +2473,97 @@ function shadeVariants(hex) {
   }
 
 
+
+  /**
+   * 在原漆里加多少——阴影/高光卡的配方用这个。
+   *
+   * 和 solve 的区别：solve 是"从一堆漆里配出某个颜色"，
+   * 这里是"在这支漆的基础上加多少什么"。
+   *
+   * 按百分比算，不是按滴：高光往往要加三四成的白，
+   * 用滴表示会变成"加 120 滴"，没有意义。少量时再换算成滴。
+   */
+  function tintRecipe(baseHex, targetHex, pigmentIds, opts) {
+    opts = opts || {};
+    var volume = opts.volume || 10;
+
+    var STEPS = [2, 3, 4, 6, 8, 12, 16, 22, 30, 40, 50];
+
+    var targetLab = labOfHex(targetHex);
+    var baseKs = paintKs(baseHex);
+
+    function findPig(id) {
+      for (var q = 0; q < PIGMENTS.length; q++) if (PIGMENTS[q].code === id) return PIGMENTS[q];
+      return null;
+    }
+
+    var pigs = (pigmentIds || []).map(findPig).filter(function (p) {
+      return p && p.kind !== 'additive';
+    });
+    if (!pigs.length) return null;
+
+    function evalMix(specs) {
+      var usedPct = 0;
+      for (var i = 0; i < specs.length; i++) usedPct += specs[i].pct;
+      if (usedPct >= 95) return null;
+
+      var comps = [{ ks: baseKs }];
+      var w = [100 - usedPct];
+      for (var j = 0; j < specs.length; j++) {
+        comps.push({ ks: paintKs(specs[j].pigment.hex) });
+        w.push(specs[j].pct);
+      }
+      return deltaE00(measure(mixSpectrum(comps, w)).lab, targetLab);
+    }
+
+    var singles = [];
+    for (var i = 0; i < pigs.length; i++) {
+      for (var s = 0; s < STEPS.length; s++) {
+        var de = evalMix([{ pigment: pigs[i], pct: STEPS[s] }]);
+        if (de != null) singles.push({ pigment: pigs[i], pct: STEPS[s], deltaE: de });
+      }
+    }
+    if (!singles.length) return null;
+    singles.sort(function (a, b) { return a.deltaE - b.deltaE; });
+
+    var best = { items: [{ pigment: singles[0].pigment, pct: singles[0].pct }], deltaE: singles[0].deltaE };
+
+    var top = singles.slice(0, 4);
+    for (var t = 0; t < top.length; t++) {
+      for (var k = 0; k < pigs.length; k++) {
+        if (pigs[k].code === top[t].pigment.code) continue;
+        for (var s2 = 0; s2 < STEPS.length; s2++) {
+          var d2 = evalMix([
+            { pigment: top[t].pigment, pct: top[t].pct },
+            { pigment: pigs[k], pct: STEPS[s2] }
+          ]);
+          if (d2 != null && d2 < best.deltaE) {
+            best = {
+              items: [
+                { pigment: top[t].pigment, pct: top[t].pct },
+                { pigment: pigs[k], pct: STEPS[s2] }
+              ],
+              deltaE: d2
+            };
+          }
+        }
+      }
+    }
+
+    var totalPct = 0;
+    best.items.forEach(function (it) {
+      totalPct += it.pct;
+      it.ml = Math.round((it.pct / 100) * volume * 10) / 10;
+      it.drops = Math.round((it.pct / 100) * volume / DROP_ML);
+    });
+    best.totalPct = totalPct;
+    best.basePct = 100 - totalPct;
+    best.volume = volume;
+    best.exact = best.deltaE < 2.5;
+
+    return best;
+  }
+
   /** 用一个词说清这个颜色的色调偏向（彩度太低就不说） */
   function castName(lab) {
     var c = Math.hypot(lab[1], lab[2]);
@@ -2528,6 +2619,7 @@ function shadeVariants(hex) {
     castName: castName,
     metalName: metalName,
     shadeVariants: shadeVariants,
+    tintRecipe: tintRecipe,
     nearestPaints: nearestPaints,
     judgeMetallic: judgeMetallic,
     analyzeImage: analyzeImage,
