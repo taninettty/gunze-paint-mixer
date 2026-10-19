@@ -80,10 +80,12 @@
     return '差别较大';
   }
 
-  function grade(de) {
+  function grade(de, chroma) {
+    // 两个都接近中性（白/灰/黑）时色相肉眼难分，ΔE00 会被低彩度下的色相角放大
+    var neutral = typeof chroma === 'number' && chroma < 6;
     if (de <= 1) return ['ok', '几乎无差'];
-    if (de <= 2) return ['ok', '很好'];
-    if (de <= 3.5) return ['warn', '可接受'];
+    if (de <= (neutral ? 2.5 : 2)) return ['ok', '很好'];
+    if (de <= (neutral ? 5 : 3.5)) return ['warn', neutral ? '接近中性，肉眼难分' : '可接受'];
     return ['bad', '偏差明显'];
   }
 
@@ -884,7 +886,10 @@
     $('chipPred').style.background = res.predicted.hex;
     $('predHexLabel').textContent = res.predicted.hex;
 
-    var g = grade(res.deltaE);
+    var tLab = res.target.lab || E.labOfHex(res.target.hex);
+    var pLab = res.predicted.lab || E.labOfHex(res.predicted.hex);
+    var chromaAvg = (Math.hypot(tLab[1], tLab[2]) + Math.hypot(pLab[1], pLab[2])) / 2;
+    var g = grade(res.deltaE, chromaAvg);
     $('deBox').className = 'de ' + g[0];
     $('deValue').textContent = res.deltaE.toFixed(2);
     $('deLabel').textContent = g[1];
@@ -1269,9 +1274,26 @@
       cv.width = w;
       cv.height = h;
       cv.hidden = false;
-      cv.getContext('2d').drawImage(img, 0, 0, w, h);
+      var ctx = cv.getContext('2d');
+      // 先铺白底：带透明通道的 PNG 直接画会"看不见"，分析也会读到空白
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
 
       photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+
+      // 顺带判断：整张图是不是几乎一个颜色（纯色截图、透明底）
+      (function () {
+        var d = photo.baseImageData.data;
+        var s = 0, s2 = 0, n = 0;
+        for (var i = 0; i < d.length; i += 4 * 37) {
+          var l = d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114;
+          s += l; s2 += l * l; n++;
+        }
+        var mean = s / n;
+        var varr = Math.max(0, s2 / n - mean * mean);
+        photo.flatImage = Math.sqrt(varr) < 3;
+      })();
 
       photo.mark = null;
       photo.marks = [];
@@ -1456,6 +1478,12 @@
     });
 
     photo.summaryText = null;
+
+    if (photo.flatImage) {
+      $('resultTitle').textContent = '这张图几乎是纯色（可能是纯白截图或透明底），分析结果没有意义——换一张有模型主体的照片';
+      $('resultTitle').hidden = false;
+      return;
+    }
 
     $('resultTitle').textContent = '大概用了 ' + (codes.length || photo.shown.length) + ' 支漆' +
       (codes.length ? '：' + codes.slice(0, 4).join('、') : '') + '  ·  ' + photo.shown.length + ' 块主色' +
