@@ -1261,6 +1261,8 @@
   function showPhotoError(msg) {
     var cv = $('photoCanvas');
     if (cv) cv.hidden = true;
+    var im = $('photoImg');
+    if (im) { im.hidden = true; im.removeAttribute('src'); }
     var t = $('resultTitle');
     if (t) {
       t.hidden = false;
@@ -1295,6 +1297,12 @@
       cv.width = w;
       cv.height = h;
       cv.hidden = false;
+      var im = $('photoImg');
+      if (im) {
+        im.src = url;
+        im.hidden = false;
+        im.style.maxWidth = '100%';
+      }
       var ctx = cv.getContext('2d');
 
       try {

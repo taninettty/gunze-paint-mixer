@@ -602,7 +602,15 @@
     font-size: 11px; color: var(--ink-3); letter-spacing: .06em;
     padding: 6px 8px 8px;
   }
-  .canvas-stack { position: relative; display: inline-block; max-width: 100%; margin: 0 auto; }
+  .canvas-stack { position: relative; display: block; width: 100%; margin: 0 auto; }
+  .canvas-stack img {
+    display: block; width: 100%; height: auto; border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .canvas-stack canvas {
+    position: absolute; inset: 0; width: 100% !important; height: 100% !important;
+    border: none; border-radius: 10px; display: block;
+  }
   .badges { position: absolute; inset: 0; pointer-events: none; }
   .drag-box {
     position: absolute; border: 1.5px dashed var(--accent);
@@ -1130,6 +1138,7 @@
     <div class="modal-body">
       <div class="canvas-pane">
         <div class="canvas-stack">
+          <img id="photoImg" alt="" hidden>
           <canvas id="photoCanvas" hidden></canvas>
           <div class="drag-box" id="dragBox" hidden></div>
           <div class="badges" id="badges"></div>
