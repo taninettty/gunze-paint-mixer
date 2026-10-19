@@ -1571,7 +1571,7 @@
     }
 
     renderList();
-    setMode('mask');
+    setMode('photo');
 
     var codes = [];
     photo.shown.forEach(function (c) {
@@ -2101,7 +2101,7 @@
             photo.hidden[c.index] = true;
             photo.shown = photo.shown.filter(function (x) { return x.index !== c.index; });
             renderList();
-            setMode('mask');
+            setMode('photo');
           }
         }
       ]);
@@ -2200,6 +2200,9 @@
 
   function setMode(mode) {
     photo.mode = mode;
+    [].forEach.call(document.querySelectorAll('.mode'), function (b) {
+      b.classList.toggle('active', b.dataset.mode === mode);
+    });
 
     var modes = document.querySelectorAll('.mode');
     for (var i = 0; i < modes.length; i++) {
