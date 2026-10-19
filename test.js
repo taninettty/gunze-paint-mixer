@@ -482,5 +482,15 @@ for (let i = 0; i < 10; i++) {
 const avg = (Date.now() - t0) / 10;
 check('7 支漆单次求解 < 300ms', avg < 300, `平均 ${avg.toFixed(0)}ms（最慢单次 ${slowest}ms）`);
 
+// 最后一条：README 宣称的测试数必须等于实际跑的数量（含本条）
+{
+  const readme = fs.readFileSync(path.join(__dirname, 'README.md'), 'utf8');
+  const claims = [...readme.matchAll(/(\d+) 项/g)].map(m => Number(m[1]));
+  const uniq = [...new Set(claims)];
+  const expect = pass + fail + 1;
+  check('README 的测试数与实际一致', uniq.length === 1 && uniq[0] === expect,
+    claims.length ? '宣称 ' + uniq.join('/') + ' · 实际 ' + expect : 'README 没写');
+}
+
 console.log(`\n===== ${pass} 通过 / ${fail} 失败 =====\n`);
 process.exit(fail ? 1 : 0);
