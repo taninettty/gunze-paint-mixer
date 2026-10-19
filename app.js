@@ -279,6 +279,9 @@
     var fd = $('failDetail');
     if (fd) fd.hidden = v.block !== 'fail';
 
+    var ad = $('artDetail');
+    if (ad) ad.hidden = v.block !== 'art';
+
     var listEl = $('kbList');
     if (listEl) listEl.hidden = true;
 
