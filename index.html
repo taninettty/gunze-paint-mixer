@@ -425,37 +425,17 @@
   }
   .kb-tab:hover { border-color: var(--ink-3); color: var(--ink); }
   .kb-tab.active:hover { color: #fff; }
-  .fail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .fail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
   .fail-grid article { border: 1px solid var(--line); border-radius: 10px; background: #fff; padding: 10px 12px; }
   .fail-grid h5 { margin: 8px 0 6px; font-size: 12.5px; }
   .fail-grid p { margin: 0 0 4px; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
   .fail-grid b { color: var(--ink); }
-  .defect { height: 54px; border-radius: 8px; border: 1px solid rgba(0,0,0,.08); background-color: #B79764; }
-  .defect.peel {
-    background-image: radial-gradient(circle at 4px 4px, rgba(255,255,255,.32) 2px, transparent 2.4px);
-    background-size: 9px 9px;
+  .defect {
+    width: 100%; height: auto; display: block; margin-bottom: 8px;
+    border-radius: 8px; background: #FAF8F4; border: 1px solid var(--line);
   }
-  .defect.sag {
-    background-image: repeating-linear-gradient(90deg, rgba(90,50,20,.55) 0 2px, transparent 2px 26px),
-                      repeating-linear-gradient(90deg, rgba(255,255,255,.15) 0 6px, transparent 6px 26px);
-  }
-  .defect.blush { background-image: linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.35)); }
-  .defect.eye {
-    background-image: radial-gradient(circle at 12px 14px, rgba(60,40,20,.5) 3px, rgba(255,255,255,.25) 3.6px, transparent 4.2px);
-    background-size: 30px 28px;
-  }
-  .defect.dry {
-    background-image: radial-gradient(circle at 2px 2px, rgba(90,60,30,.22) 1.1px, transparent 1.6px);
-    background-size: 5px 5px;
-  }
-  .defect.bleed {
-    background-image: repeating-linear-gradient(45deg, rgba(160,60,25,.55) 0 4px, transparent 4px 13px);
-  }
-  .defect.grain {
-    background-image: radial-gradient(circle at 3px 3px, rgba(50,30,10,.55) 1.6px, transparent 2px);
-    background-size: 12px 12px;
-  }
-  .defect.miss { background-image: linear-gradient(90deg, #B79764 0 62%, #CDB08C 62% 100%); }
+  .fail-grid .sym { color: var(--ink); }
+
   .kb-tab {
     height: 28px; padding: 0 13px; border-radius: 999px; cursor: pointer;
     border: 1px solid var(--line); background: #FCFBF8;
@@ -1967,80 +1947,145 @@
     </p>
 
     <div class="fail-grid">
-      <article>
-        <div class="defect peel"></div>
-        <h5>橘皮</h5>
-        <p><b>长什么样</b>　表面密密麻麻的小凹坑，反光时像橘子皮。</p>
-        <p><b>原因</b>　漆太稠、枪太远、气压不足、或者一层喷太厚。</p>
-        <p><b>处理</b>　没干 → 稀释后薄薄盖一层；干了 → 800 目湿磨，再薄喷。</p>
-        <p><b>预防</b>　稀释到位、距离 15–20 cm、先薄后湿。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <path d="M6 70 V54 q7 -7 14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 V70 Z" fill="#C89B6A"/>
+            <path d="M40 30 L52 50" stroke="#B4530A" stroke-width="1.2"/>
+            <path d="M64 30 L60 50" stroke="#B4530A" stroke-width="1.2"/>
+            <path d="M88 30 L70 50" stroke="#B4530A" stroke-width="1.2"/>
+            <text x="96" y="26" class="ab-fig-t">反光散开</text>
+          </svg>
+          <h5>橘皮</h5>
+          <p class="sym"><b>断面</b>　漆膜表面是波浪，不是平的。</p>
+          <p><b>长什么样</b>　密密麻麻的小凹坑，反光像橘子皮。</p>
+          <p><b>原因</b>　漆太稠、枪太远、气压不足，或一层喷太厚。</p>
+          <p><b>处理</b>　没干 → 稀释后薄盖；干了 → 800 目湿磨再薄喷。</p>
+          <p><b>预防</b>　稀释到位、距离 15–20 cm、先薄后湿。</p>
+        </article>
 
-      <article>
-        <div class="defect sag"></div>
-        <h5>流挂</h5>
-        <p><b>长什么样</b>　一道漆往下淌，下边缘有厚边，干了像泪痕。</p>
-        <p><b>原因</b>　一次喷太厚、停枪、距离太近。</p>
-        <p><b>处理</b>　必须等干透，打磨掉流挂边缘，再薄喷补。</p>
-        <p><b>预防</b>　薄喷多层，走枪匀速别停。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <path d="M6 70 V52 H112 q6 0 8 8 q3 14 12 14 q9 0 11 -12 q2 -10 9 -10 H214 V70 Z" fill="#C89B6A"/>
+            <path d="M141 56 V82" stroke="#B03A2E" stroke-width="1.4" marker-end="url(#abArrow)"/>
+            <text x="148" y="90" class="ab-fig-t">这里的漆最厚</text>
+          </svg>
+          <h5>流挂</h5>
+          <p class="sym"><b>断面</b>　某一处漆膜突然变厚，往下坠。</p>
+          <p><b>长什么样</b>　一道漆往下淌，下边缘有厚边。</p>
+          <p><b>原因</b>　一次喷太厚、停枪、距离太近。</p>
+          <p><b>处理</b>　必须干透，打磨掉流挂边缘再薄喷。</p>
+          <p><b>预防</b>　薄喷多层，匀速别停。</p>
+        </article>
 
-      <article>
-        <div class="defect blush"></div>
-        <h5>白化（发白雾）</h5>
-        <p><b>长什么样</b>　漆面像蒙了一层白霜，尤其光泽和透明最明显。</p>
-        <p><b>原因</b>　湿度太高、稀释剂挥发太快、温度低。</p>
-        <p><b>处理</b>　没干透 → 加缓干剂薄喷一层；已经白了 → 打磨掉重喷。</p>
-        <p><b>预防</b>　湿度 &lt;75%，潮湿天用缓干型稀释剂。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="48" width="208" height="22" fill="#C89B6A"/>
+            <rect x="6" y="42" width="208" height="20" fill="#FFFFFF" opacity=".55"/>
+            <g fill="#FFFFFF" opacity=".9">
+              <circle cx="34" cy="56" r="4"/><circle cx="62" cy="63" r="3.4"/>
+              <circle cx="96" cy="54" r="4.2"/><circle cx="130" cy="62" r="3.6"/>
+              <circle cx="162" cy="55" r="4"/><circle cx="190" cy="63" r="3.2"/>
+            </g>
+            <text x="6" y="36" class="ab-fig-t">漆膜里封住的水汽</text>
+          </svg>
+          <h5>白化</h5>
+          <p class="sym"><b>断面</b>　漆膜内部有细小水汽，整层泛白。</p>
+          <p><b>长什么样</b>　像蒙了一层白霜，光泽和透明最明显。</p>
+          <p><b>原因</b>　湿度太高、稀释剂挥发太快、温度低。</p>
+          <p><b>处理</b>　没干透 → 加缓干剂薄喷；已白 → 打磨重来。</p>
+          <p><b>预防</b>　湿度 &lt;75%，潮湿天用缓干型稀释剂。</p>
+        </article>
 
-      <article>
-        <div class="defect eye"></div>
-        <h5>鱼眼 / 缩孔</h5>
-        <p><b>长什么样</b>　一个个小圆坑，坑底能看见底色。</p>
-        <p><b>原因</b>　表面有油、水、硅（手摸过、脱模剂没洗、空压机带水）。</p>
-        <p><b>处理</b>　干透打磨，洗件（加一点洗洁精）再重喷。</p>
-        <p><b>预防</b>　喷前洗件、加水隔、别用手摸。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <path d="M6 70 V48 H88 q10 0 12 10 q2 12 10 12 q8 0 10 -12 q2 -10 12 -10 H214 V70 Z" fill="#C89B6A"/>
+            <path d="M98 74 q12 6 24 0" stroke="#8A7A63" stroke-width="2" fill="none"/>
+            <text x="84" y="92" class="ab-fig-t">坑底露出底色</text>
+          </svg>
+          <h5>鱼眼 / 缩孔</h5>
+          <p class="sym"><b>断面</b>　漆膜被顶开一个火山口，坑底见到下层。</p>
+          <p><b>长什么样</b>　一个个小圆坑，中心颜色和周围不同。</p>
+          <p><b>原因</b>　表面有油、水或硅（手摸、脱模剂、空压机带水）。</p>
+          <p><b>处理</b>　干透打磨，洗件（加一点洗洁精）再重喷。</p>
+          <p><b>预防</b>　喷前洗件、加水隔、别用手摸。</p>
+        </article>
 
-      <article>
-        <div class="defect dry"></div>
-        <h5>干喷</h5>
-        <p><b>长什么样</b>　表面粗糙发粉，像砂纸，摸上去有颗粒感但不反光。</p>
-        <p><b>原因</b>　距离太远、气压太大、漆太稀，漆在半空就干了。</p>
-        <p><b>处理</b>　打磨平，拉近距离、降气压重喷。</p>
-        <p><b>预防</b>　距离 15–20 cm，气压 1.5–2 bar。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="62" width="208" height="8" fill="#C89B6A" opacity=".7"/>
+            <g fill="#C89B6A">
+              <circle cx="26" cy="52" r="5"/><circle cx="48" cy="44" r="4"/>
+              <circle cx="72" cy="55" r="5.5"/><circle cx="96" cy="44" r="4.4"/>
+              <circle cx="120" cy="53" r="5"/><circle cx="146" cy="42" r="4.2"/>
+              <circle cx="170" cy="52" r="5.4"/><circle cx="194" cy="45" r="4"/>
+            </g>
+            <text x="6" y="32" class="ab-fig-t">漆在半空就干了，落下来是颗粒</text>
+          </svg>
+          <h5>干喷</h5>
+          <p class="sym"><b>断面</b>　没有连续漆膜，表面是一层松散颗粒。</p>
+          <p><b>长什么样</b>　粗糙发粉、反光发哑，摸上去像砂纸。</p>
+          <p><b>原因</b>　距离太远、气压太大、漆太稀。</p>
+          <p><b>处理</b>　打磨平，拉近、降气压重喷。</p>
+          <p><b>预防</b>　距离 15–20 cm，气压 1.5–2 bar。</p>
+        </article>
 
-      <article>
-        <div class="defect bleed"></div>
-        <h5>遮盖渗漆</h5>
-        <p><b>长什么样</b>　颜色交界处有锯齿状渗色，边缘不齐。</p>
-        <p><b>原因</b>　胶带没压实、边缘翘起、一次喷太湿顺着胶带渗进去。</p>
-        <p><b>处理</b>　干透后补边，局部重新遮盖再喷。</p>
-        <p><b>预防</b>　压边压实，先薄喷一层「封边」再正常喷。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="48" width="96" height="22" fill="#8FA9C4"/>
+            <rect x="118" y="48" width="96" height="22" fill="#C89B6A"/>
+            <rect x="102" y="34" width="10" height="44" fill="#E8E2D6" stroke="#B9B0A0"/>
+            <path d="M96 48 q10 8 6 22" stroke="#8FA9C4" stroke-width="4" fill="none" opacity=".9"/>
+            <path d="M118 48 q-10 8 -6 22" stroke="#C89B6A" stroke-width="4" fill="none" opacity=".9"/>
+            <text x="64" y="30" class="ab-fig-t">漆从胶带边缘渗进去</text>
+          </svg>
+          <h5>遮盖渗漆</h5>
+          <p class="sym"><b>断面</b>　两种颜色在胶带边缘互相咬进去。</p>
+          <p><b>长什么样</b>　交界处有锯齿状渗色，边缘不齐。</p>
+          <p><b>原因</b>　胶带没压实、边缘翘起、一次喷太湿。</p>
+          <p><b>处理</b>　干透后补边，局部重新遮盖再喷。</p>
+          <p><b>预防</b>　压边压实，先薄喷一层「封边」。</p>
+        </article>
 
-      <article>
-        <div class="defect grain"></div>
-        <h5>颗粒</h5>
-        <p><b>长什么样</b>　漆面上有凸起的小点，反光时很明显。</p>
-        <p><b>原因</b>　空气里的灰尘、漆没过滤、干喷的漆雾落在湿漆上。</p>
-        <p><b>处理</b>　干透后用 1500 目砂纸打磨，再抛光。</p>
-        <p><b>预防</b>　漆过一遍滤网，喷前地上洒水降尘。</p>
-      </article>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="48" width="208" height="22" fill="#C89B6A"/>
+            <circle cx="72" cy="42" r="9" fill="#8A6A3A"/>
+            <circle cx="70" cy="40" r="4" fill="#A8895A"/>
+            <circle cx="150" cy="46" r="6" fill="#8A6A3A"/>
+            <text x="6" y="32" class="ab-fig-t">灰尘或未过滤的漆块落在湿漆上</text>
+          </svg>
+          <h5>颗粒</h5>
+          <p class="sym"><b>断面</b>　漆面里嵌着异物，凸出来。</p>
+          <p><b>长什么样</b>　凸起的小点，反光时很明显。</p>
+          <p><b>原因</b>　空气里的灰尘、漆没过滤、干喷的漆雾落下。</p>
+          <p><b>处理</b>　干透后用 1500 目打磨，再抛光。</p>
+          <p><b>预防</b>　漆过一遍滤网，喷前地上洒水降尘。</p>
+        </article>
 
-      <article>
-        <div class="defect miss"></div>
-        <h5>漏喷 / 薄厚不均</h5>
-        <p><b>长什么样</b>　有的地方颜色深、有的浅，侧面看有明显色块。</p>
-        <p><b>原因</b>　重叠率不够、边角没先喷、走枪速度不一致。</p>
-        <p><b>处理</b>　整体薄薄补一层。</p>
-        <p><b>预防</b>　重叠 1/3，先边角后大面。</p>
-      </article>
-    </div>
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <path d="M6 70 V50 L150 50 L214 62 V70 Z" fill="#C89B6A"/>
+            <path d="M150 50 L214 62" stroke="#B4530A" stroke-width="1" stroke-dasharray="3 3"/>
+            <text x="120" y="42" class="ab-fig-t">这一段薄了，底色透出来</text>
+          </svg>
+          <h5>漏喷 / 薄厚不均</h5>
+          <p class="sym"><b>断面</b>　漆膜一头厚一头薄，薄处透底色。</p>
+          <p><b>长什么样</b>　有的地方深、有的浅，侧面看有明显色块。</p>
+          <p><b>原因</b>　重叠率不够、边角没先喷、走枪速度不一致。</p>
+          <p><b>处理</b>　整体薄薄补一层。</p>
+          <p><b>预防</b>　重叠 1/3，先边角后大面。</p>
+        </article>
+      </div>
 
-    <div class="ab-principle">
+          <div class="ab-principle">
       <h4>三条通用原则</h4>
       <p><b>1. 先停手，别趁湿补救。</b>　湿的时候动它只会越弄越糟，等干了再处理。</p>
       <p><b>2. 打磨是最后手段。</b>　每磨一次就少一层漆，磨穿底色就得从头来。</p>
