@@ -414,6 +414,28 @@ check('阈值集中在 TUNING', /var TUNING = \{/.test(engineSrc) && /TUNING\.LA
 check('浏览器端没有 const/let', !/\b(const|let)\b/.test(fs.readFileSync(path.join(__dirname, "app.js"), "utf8")),
   'app.js 是 ES5');
 
+console.log('\n[25] 阴影/高光的色相差异');
+function hueOfLab(l) { let h = Math.atan2(l[2], l[1]) * 180 / Math.PI; return (h + 360) % 360; }
+function hueGap(a, b) { const d = Math.abs(hueOfLab(a) - hueOfLab(b)); return d > 180 ? 360 - d : d; }
+
+for (const base of ['#B79764', '#3A5FA8', '#C0392B', '#4A7A45']) {
+  const v = E.shadeVariants(base);
+  const c = v.filter(x => x.id === 'sh-cool')[0];
+  const w = v.filter(x => x.id === 'sh-warm')[0];
+  const de = E.deltaE00(c.lab, w.lab);
+  check('冷暖阴影明显不同 ' + base, de > 15, 'ΔE ' + de.toFixed(1) + ' · 色相差 ' + hueGap(c.lab, w.lab).toFixed(0) + '°');
+}
+
+const nb = E.shadeVariants('#9AA0A6');
+const nc = nb.filter(x => x.id === 'sh-cool')[0];
+const nw = nb.filter(x => x.id === 'sh-warm')[0];
+check('中性色也给冷暖色偏', E.deltaE00(nc.lab, nw.lab) > 10, 'ΔE ' + E.deltaE00(nc.lab, nw.lab).toFixed(1));
+
+const baseLab = E.labOfHex('#B79764');
+const hv = E.shadeVariants('#B79764');
+check('高光更亮', hv[0].lab[0] > baseLab[0] + 5, 'L ' + hv[0].lab[0].toFixed(0));
+check('阴影更暗', hv[2].lab[0] < baseLab[0] - 5, 'L ' + hv[2].lab[0].toFixed(0));
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

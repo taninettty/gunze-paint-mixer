@@ -2295,33 +2295,96 @@ var assign = new Array(pts.length).fill(0);
   /**
    * 从一个底色推出高光色和阴影色（含冷暖两版）。
    *
-   * 做法是在 Lab 里平移：高光提明度、略降彩度；阴影压明度，冷暖靠 b* 偏。
+   * 冷暖的差别是**色相**，不是明度：把色相往"冷极"（青蓝 200°/270°）
+   * 或"暖极"（红橙 10°/40°）转一段，冷阴影与暖阴影相差 60° 以上。
    */
   function shadeVariants(hex) {
     var lab = labOfHex(hex);
+    var baseC = Math.hypot(lab[1], lab[2]);
 
-    var list = [
-      { id: 'hi', name: '高光', dl: 13, ch: 0.92, db: 1.5, note: '加白提亮，留一点原色' },
-      { id: 'hi-warm', name: '暖高光', dl: 12, ch: 0.95, db: 7, note: '偏黄，适合暖色系' },
-      { id: 'sh', name: '阴影', dl: -14, ch: 1.02, db: 0, note: '加压暗，彩度别掉' },
-      { id: 'sh-cool', name: '冷阴影', dl: -15, ch: 1.05, db: -8, note: '加深偏蓝紫' },
-      { id: 'sh-warm', name: '暖阴影', dl: -15, ch: 1.05, db: 8, note: '加深偏棕红' }
+    function hueOf(a, b) {
+      var h = Math.atan2(b, a) * 180 / Math.PI;
+      return (h + 360) % 360;
+    }
+
+    function circ(from, to) {
+      var d = ((to - from + 540) % 360) - 180;
+      return d;
+    }
+
+    function nearestPole(h, poles) {
+      var best = poles[0], bd = 1e9;
+      for (var i = 0; i < poles.length; i++) {
+        var d = Math.abs(circ(h, poles[i]));
+        if (d < bd) { bd = d; best = poles[i]; }
+      }
+      return best;
+    }
+
+    function rotateLab(L, a, b, deg, cScale) {
+      var r = deg * Math.PI / 180;
+      var c = Math.cos(r), s = Math.sin(r);
+      var na = a * c - b * s;
+      var nb = a * s + b * c;
+      return [L, na * cScale, nb * cScale];
+    }
+
+    function toHex(L, a, b) {
+      var rgb = labToSrgb([L, Math.max(-128, Math.min(127, a)), Math.max(-128, Math.min(127, b))]);
+      return rgbToHex(rgb[0], rgb[1], rgb[2]);
+    }
+
+    // 阴影：往冷极或暖极转
+    function shadow(warm) {
+      var L = Math.max(6, Math.min(96, lab[0] - 15));
+
+      // 中性色没有色相可转，直接给一个色偏
+      if (baseC < 8) {
+        var ca = warm ? 10 : -6;
+        var cb = warm ? 6 : -10;
+        return { hex: toHex(L, ca, cb), lab: [L, ca, cb] };
+      }
+
+      var h = hueOf(lab[1], lab[2]);
+      var pole = warm ? nearestPole(h, [40, 10]) : nearestPole(h, [270, 200]);
+      var deg = circ(h, pole) * 0.45;
+      if (Math.abs(deg) < 15) deg = deg < 0 ? -15 : 15;
+
+      var v = rotateLab(L, lab[1], lab[2], deg, warm ? 1.05 : 0.9);
+      return { hex: toHex(v[0], v[1], v[2]), lab: v, deg: deg };
+    }
+
+    // 高光：提亮为主，色相最多轻推
+    function highlight(warm) {
+      var L = Math.max(6, Math.min(96, lab[0] + (warm ? 12 : 13)));
+      if (baseC < 8) return { hex: toHex(L, warm ? 4 : 0, warm ? 4 : -2), lab: [L, warm ? 4 : 0, warm ? 4 : -2] };
+
+      var h = hueOf(lab[1], lab[2]);
+      var pole = warm ? nearestPole(h, [40, 10]) : h;
+      var deg = warm ? circ(h, pole) * 0.25 : 0;
+      var v = rotateLab(L, lab[1], lab[2], deg, warm ? 0.9 : 0.86);
+      return { hex: toHex(v[0], v[1], v[2]), lab: v, deg: deg };
+    }
+
+    var hi = highlight(false);
+    var hiWarm = highlight(true);
+    var sh = shadow(false);
+    var shWarm = shadow(true);
+
+    // 有明确色相时，"阴影"单独一档：只压暗不改色
+    var shPlain = (function () {
+      var L = Math.max(6, Math.min(96, lab[0] - 14));
+      var v = [L, lab[1] * 1.02, lab[2] * 1.02];
+      return { hex: toHex(v[0], v[1], v[2]), lab: v };
+    })();
+
+    return [
+      { id: 'hi', name: '高光', note: '只提亮，色相不动', hex: hi.hex, lab: hi.lab },
+      { id: 'hi-warm', name: '暖高光', note: '提亮并往暖端轻推', hex: hiWarm.hex, lab: hiWarm.lab },
+      { id: 'sh', name: '阴影', note: '只压暗，色相不动', hex: shPlain.hex, lab: shPlain.lab },
+      { id: 'sh-cool', name: '冷阴影', note: '色相往冷端转 ' + Math.abs(Math.round(sh.deg || 0)) + '°', hex: sh.hex, lab: sh.lab },
+      { id: 'sh-warm', name: '暖阴影', note: '色相往暖端转 ' + Math.abs(Math.round(shWarm.deg || 0)) + '°', hex: shWarm.hex, lab: shWarm.lab }
     ];
-
-    return list.map(function (x) {
-      var L = Math.max(4, Math.min(97, lab[0] + x.dl));
-      var a = lab[1] * x.ch;
-      var b = lab[2] * x.ch + x.db;
-      var rgb = labToSrgb([L, a, b]);
-
-      return {
-        id: x.id,
-        name: x.name,
-        note: x.note,
-        lab: [L, a, b],
-        hex: rgbToHex(rgb[0], rgb[1], rgb[2])
-      };
-    });
   }
 
   /** 把颜色说成金属名：香槟金、黄铜、红铜、枪铁…… */
