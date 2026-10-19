@@ -1258,24 +1258,34 @@
     });
   }
 
+  function showPhotoError(msg) {
+    var cv = $('photoCanvas');
+    if (cv) cv.hidden = true;
+    var t = $('resultTitle');
+    if (t) {
+      t.hidden = false;
+      t.textContent = msg;
+    }
+    var lb = $('lightBar');
+    if (lb) lb.hidden = true;
+    var meta = $('imgMeta');
+    if (meta) meta.textContent = '';
+  }
+
   function loadPhoto(file) {
     var url = URL.createObjectURL(file);
     var img = new Image();
 
     img.onerror = function () {
-      var t = $('resultTitle');
-      if (t) {
-        t.hidden = false;
-        t.textContent = '这张图打不开：可能是 iPhone 的 HEIC 格式。换成 JPG / PNG 再试一次。';
-      }
-      var lb = $('lightBar');
-      if (lb) lb.hidden = true;
+      showPhotoError('这张图打不开：可能是 HEIC 或损坏的文件。换成 JPG / PNG 再试一次。');
     };
 
     img.onload = function () {
       // 统一显示尺寸：小图放大、大图缩小，都装进同一个框
-      var boxW = 1000;
-      var boxH = 640;
+      // 小屏压得更狠：手机 WebView 对大画布的内存很敏感
+      var small = (window.innerWidth || 1000) < 820;
+      var boxW = small ? 720 : 1000;
+      var boxH = small ? 720 : 640;
       var scale = Math.min(boxW / img.width, boxH / img.height);
       scale = Math.max(0.15, Math.min(scale, 3));
       var w = Math.max(1, Math.round(img.width * scale));
@@ -1286,12 +1296,23 @@
       cv.height = h;
       cv.hidden = false;
       var ctx = cv.getContext('2d');
-      // 先铺白底：带透明通道的 PNG 直接画会"看不见"，分析也会读到空白
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
 
-      photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+      try {
+        // 先铺白底：带透明通道的 PNG 直接画会"看不见"，分析也会读到空白
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+      } catch (err) {
+        showPhotoError('这张图浏览器处理不了（可能太大或格式特殊），换一张 JPG 试试');
+        return;
+      }
+
+      try {
+        photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+      } catch (err) {
+        showPhotoError('读不出图片像素（画布太大或被浏览器限制），换一张小一点的照片');
+        return;
+      }
       if ($('imgMeta')) $('imgMeta').textContent = '已载入 ' + img.width + '×' + img.height;
 
       // 顺带判断：整张图是不是几乎一个颜色（纯色截图、透明底）
