@@ -1087,6 +1087,7 @@
 
   function bindPhoto() {
     $('analyzeBtn').addEventListener('click', openModal);
+    if ($('dbgBtn')) $('dbgBtn').addEventListener('click', photoDebug);
     $('modalClose').addEventListener('click', closeModal);
 
     $('analyzeModal').addEventListener('click', function (ev) {
@@ -1256,6 +1257,63 @@
       addMark(mark);
       renderCanvas('mark', null);
     });
+  }
+
+  function photoDebug() {
+    var im = $('photoImg');
+    var cv = $('photoCanvas');
+    var out = $('dbgOut');
+    var lines = [];
+
+    lines.push('页面版本 ' + (($('appVer') || {}).textContent || '?'));
+    lines.push('UA ' + navigator.userAgent.slice(0, 90));
+    lines.push('视口 ' + window.innerWidth + '×' + window.innerHeight + ' · DPR ' + (window.devicePixelRatio || 1));
+
+    if (im) {
+      var ir = im.getBoundingClientRect();
+      lines.push('img 显示 ' + Math.round(ir.width) + '×' + Math.round(ir.height) +
+        ' · 原图 ' + im.naturalWidth + '×' + im.naturalHeight +
+        ' · 完成 ' + im.complete + ' · hidden ' + im.hidden +
+        ' · display ' + getComputedStyle(im).display);
+    } else {
+      lines.push('img 元素不存在');
+    }
+
+    if (cv) {
+      var cr = cv.getBoundingClientRect();
+      lines.push('canvas 属性 ' + cv.width + '×' + cv.height +
+        ' · 显示 ' + Math.round(cr.width) + '×' + Math.round(cr.height) +
+        ' · hidden ' + cv.hidden +
+        ' · display ' + getComputedStyle(cv).display +
+        ' · opacity ' + getComputedStyle(cv).opacity);
+
+      try {
+        var ctx = cv.getContext('2d');
+        var d1 = ctx.getImageData(2, 2, 1, 1).data;
+        var d2 = ctx.getImageData(Math.floor(cv.width / 2), Math.floor(cv.height / 2), 1, 1).data;
+        lines.push('canvas 像素 左上 [' + [d1[0], d1[1], d1[2], d1[3]].join(',') + '] 中心 [' +
+          [d2[0], d2[1], d2[2], d2[3]].join(',') + ']');
+      } catch (e) {
+        lines.push('canvas 读像素失败 ' + e.message);
+      }
+    } else {
+      lines.push('canvas 元素不存在');
+    }
+
+    if (photo.baseImageData) {
+      var b = photo.baseImageData.data;
+      var mid = (Math.floor(photo.baseImageData.height / 2) * photo.baseImageData.width +
+        Math.floor(photo.baseImageData.width / 2)) * 4;
+      lines.push('分析数据 ' + photo.baseImageData.width + '×' + photo.baseImageData.height +
+        ' · 中心 [' + [b[mid], b[mid + 1], b[mid + 2], b[mid + 3]].join(',') + ']');
+    } else {
+      lines.push('还没有分析数据');
+    }
+
+    lines.push('模式 ' + photo.mode + ' · 色块 ' + (photo.shown ? photo.shown.length : 0));
+
+    out.textContent = lines.join(String.fromCharCode(10));
+    out.hidden = false;
   }
 
   function showPhotoError(msg) {

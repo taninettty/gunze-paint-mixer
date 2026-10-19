@@ -624,6 +624,17 @@
     text-align: center; border: 1px solid rgba(0,0,0,.22);
     box-shadow: 0 1px 5px rgba(0,0,0,.35);
   }
+  .dbg-link {
+    display: block; margin: 6px auto 0; padding: 4px 10px;
+    border: none; background: none; cursor: pointer;
+    font-family: inherit; font-size: 10.5px; color: var(--ink-3);
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .dbg-out {
+    margin: 8px 0 0; padding: 10px; border-radius: 8px;
+    background: #2A2723; color: #E8E2D6; font-size: 10.5px; line-height: 1.6;
+    white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow: auto;
+  }
   .img-meta { font-size: 10.5px; color: var(--ink-3); margin-left: 6px; }
   .mode-row {
     display: flex; align-items: center; gap: 6px;
@@ -1107,7 +1118,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v1.2 · 2026-10</span>
+  <span class="ver" id="appVer">v1.3 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1143,6 +1154,9 @@
           <div class="drag-box" id="dragBox" hidden></div>
           <div class="badges" id="badges"></div>
         </div>
+        <button type="button" class="dbg-link" id="dbgBtn">图片没显示？点这里自检</button>
+        <pre class="dbg-out" id="dbgOut" hidden></pre>
+
         <div class="mode-row" id="modeRow" hidden>
           <button type="button" class="mode active" data-mode="mask">分区图</button>
           <button type="button" class="mode" data-mode="photo">原图</button>
@@ -1168,9 +1182,9 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=1.2"></script>
-  <script src="gunze-data.js?v=1.2"></script>
-<script src="engine.js?v=1.2"></script>
-<script src="app.js?v=1.2"></script>
+<script src="kb-data.js?v=1.3"></script>
+  <script src="gunze-data.js?v=1.3"></script>
+<script src="engine.js?v=1.3"></script>
+<script src="app.js?v=1.3"></script>
 </body>
 </html>
