@@ -2360,7 +2360,7 @@ function shadeVariants(hex) {
       'sh-gray': [-4, -8]
     };
 
-    function build(id, name, dL, cScale, targetHue, blend, note) {
+    function build(id, name, dL, cScale, targetHue, blend, note, cMax) {
       var L = clamp(lab[0] + dL, 5, 97);
       var a, b;
 
@@ -2371,7 +2371,17 @@ function shadeVariants(hex) {
         b = n[1] * k;
       } else {
         var C = baseC * cScale;
-        var h = targetHue == null ? baseH : baseH + circ(baseH, targetHue) * blend;
+        if (cMax != null && C > cMax) C = cMax;
+        var h = baseH;
+        if (targetHue != null) {
+          var d0 = circ(baseH, targetHue);
+          var rot = d0 * blend;
+          // 位移太小等于没区分：至少要挪 22°
+          if (Math.abs(rot) < 22 && Math.abs(d0) > 30) {
+            rot = (d0 < 0 ? -1 : 1) * 22;
+          }
+          h = baseH + rot;
+        }
         var r = h * Math.PI / 180;
         a = C * Math.cos(r);
         b = C * Math.sin(r);
@@ -2382,12 +2392,12 @@ function shadeVariants(hex) {
 
     // 六种自然选择：两档高光 + 四档阴影
     var list = [
-      build('hi', '高光', 13, 0.88, 70, 0.22, '提亮并往暖端移一个色相（暖光假设）'),
-      build('hi-warm', '暖高光', 12, 0.96, 55, 0.55, '提亮并更明显地往橙黄靠'),
-      build('sh', '阴影', -14, 0.86, null, 0, '压暗，饱和降一档，色相不动'),
-      build('sh-warm', '暖阴影', -15, 0.90, 55, 0.55, '压暗并往棕橙方向'),
-      build('sh-cool', '冷阴影', -16, 0.55, 305, 1, '压暗并偏紫：黄的红的一律走紫，不走橄榄绿'),
-      build('sh-gray', '灰蓝阴影', -15, 0.40, 255, 1, '压暗并偏灰蓝，最不偏色的一档')
+      build('hi', '高光', 13, 0.72, 78, 0.10, '提亮并轻微偏暖；不额外加艳', 38),
+      build('hi-warm', '暖高光', 12, 0.78, 62, 0.20, '提亮并往暖端移一点', 42),
+      build('sh', '阴影', -14, 0.58, null, 0, '压暗并明显降饱和', 26),
+      build('sh-warm', '暖阴影', -15, 0.62, 45, 1, '压暗、降饱和，往棕调', 28),
+      build('sh-cool', '冷阴影', -16, 0.45, 305, 1, '压暗并偏向紫，黄红一律走紫', 24),
+      build('sh-gray', '灰蓝阴影', -15, 0.35, 255, 1, '压暗并偏灰蓝，最不偏色', 18)
     ];
 
     // 保证每张卡都看得出差别
