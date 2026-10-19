@@ -846,7 +846,7 @@
     border-top: 1px dashed var(--line); padding-top: 12px;
   }
   .shade-head .hint { font-size: 11px; color: var(--ink-3); }
-  .shade-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+  .shade-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .shade-card {
     flex: 1 0 132px; min-width: 132px; text-align: left;
     border: 1px solid var(--line); border-radius: 10px; background: #fff;
@@ -854,7 +854,11 @@
   }
   .shade-card:hover { border-color: var(--accent); }
   .shade-card .sw { display: block; height: 34px; border-radius: 7px; border: 1px solid rgba(0,0,0,.12); }
-  .shade-card .nm { display: block; font-size: 12px; font-weight: 600; margin-top: 6px; }
+  .shade-card .nm {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 4px; font-size: 12px; font-weight: 600; margin-top: 6px;
+  }
+  .shade-card .lv { font-style: normal; font-size: 10px; font-weight: 500; color: var(--ink-3); }
   .shade-card .hx { display: block; font-size: 10.5px; color: var(--ink-3); font-family: ui-monospace, Consolas, monospace; }
   .shade-card .rc { display: block; font-size: 10.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.5; }
   .kind-note {
@@ -953,6 +957,8 @@
     /* 触控尺寸 */
     .panel button, .panel select, .panel .hexinput { min-height: 42px; }
     #copyBtn, #copyBtn2 { min-height: 46px; font-size: 14px; }
+
+    .shade-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
     /* 首屏压缩：大色块降高、常用色一行横滑、照片入口收紧 */
     .target-chip { height: 104px; }

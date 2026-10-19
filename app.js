@@ -585,6 +585,11 @@
       nm.className = 'nm';
       nm.textContent = v.name;
 
+      var lv = document.createElement('i');
+      lv.className = 'lv';
+      lv.textContent = 'L' + Math.round(v.lab[0]);
+      nm.appendChild(lv);
+
       var hx = document.createElement('span');
       hx.className = 'hx';
       hx.textContent = v.hex;
@@ -598,9 +603,7 @@
       } catch (err) { r = null; }
 
       if (r && r.ok && r.lines.length) {
-        rc.textContent = r.lines.slice(0, 2).map(function (l) {
-          return shortName(l.pigment) + ' ' + fmtPct(l.percent) + '%';
-        }).join(' + ');
+        rc.textContent = shortName(r.lines[0].pigment) + ' ' + fmtPct(r.lines[0].percent) + '%';
         card.title = v.note + ' · ' + r.lines.map(function (l) {
           return l.pigment.code + ' ' + l.pigment.name;
         }).join(' + ');
