@@ -393,7 +393,7 @@ check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js(\?[^"]*)?"
 check('index.html 引入 engine.js/app.js', /engine\.js/.test(html) && /app\.js/.test(html));
 check('同目录有 spectral.js', fs.existsSync(path.join(__dirname, 'spectral.js')));
 check('知识内容已外置', kbSrc.length > 20000 && kbSrc.indexOf('KB_DATA') >= 0, kbSrc ? Math.round(kbSrc.length / 1024) + ' KB' : '缺失');
-check('三个知识块都在', kbSrc.indexOf('airbrush:') > 0 && kbSrc.indexOf('spray:') > 0 && kbSrc.indexOf('fail:') > 0, 'airbrush/spray/fail');
+  check('四个知识块都在', kbSrc.indexOf('airbrush:') > 0 && kbSrc.indexOf('spray:') > 0 && kbSrc.indexOf('art:') > 0 && kbSrc.indexOf('fail:') > 0, 'airbrush/spray/art/fail');
 
 console.log('\n[23] 文档与数据一致');
 const README = fs.readFileSync(path.join(__dirname, "README.md"), "utf8");
@@ -456,13 +456,13 @@ console.log('\n[27] 知识内容结构');
 const kbs = fs.readFileSync(path.join(__dirname, 'kb-data.js'), 'utf8');
 const secs = {};
 let mm;
-const re = /^\s*(airbrush|spray|fail): \x60([\s\S]*?)\x60\s*,?\s*$/gm;
+const re = /^\s*(airbrush|spray|art|fail): \x60([\s\S]*?)\x60\s*,?\s*$/gm;
 while ((mm = re.exec(kbs))) secs[mm[1]] = mm[2];
 
 function count(s, re2) { return (s.match(re2) || []).length; }
 
-check('三个块都解析出来了', Object.keys(secs).length === 3, Object.keys(secs).join(','));
-for (const key of ['airbrush', 'spray', 'fail']) {
+check('四个块都解析出来了', Object.keys(secs).length === 4, Object.keys(secs).join(','));
+for (const key of ['airbrush', 'spray', 'art', 'fail']) {
   const body = secs[key] || '';
   const okDiv = count(body, /<div\b/g) === count(body, /<\/div>/g);
   const okArt = count(body, /<article\b/g) === count(body, /<\/article>/g);

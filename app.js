@@ -245,6 +245,7 @@
   var KB_TABS = [
     { id: 'gear', name: '器材' },
     { id: 'practice', name: '实务' },
+    { id: 'art', name: '配色' },
     { id: 'fail', name: '翻车急救' }
   ];
 
@@ -266,7 +267,7 @@
       tabs.appendChild(b);
     });
 
-    var VIEW = { gear: 'airbrush', practice: 'spray', fail: 'fail' };
+    var VIEW = { gear: 'airbrush', practice: 'spray', art: 'art', fail: 'fail' };
     var v = { block: VIEW[kbState.id] || 'airbrush' };
 
     var air = $('airbrush');
@@ -2388,7 +2389,7 @@
   // 把 kb-data.js 里的内容挂进页面（改文案只改那个文件）
   function mountKb() {
     if (typeof KB_DATA === "undefined") return;
-    var map = { airbrush: "airbrush", spray: "sprayDetail", fail: "failDetail" };
+    var map = { airbrush: "airbrush", spray: "sprayDetail", art: "artDetail", fail: "failDetail" };
     Object.keys(map).forEach(function (k) {
       var el = $(map[k]);
       if (el && KB_DATA[k]) el.innerHTML = KB_DATA[k];
