@@ -591,6 +591,18 @@
   .kind-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
   .kind-btn.use { margin-left: auto; border-color: var(--ink-3); color: var(--ink); }
   .mark-card .l2 { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .light-bar {
+    display: flex; align-items: center; gap: 7px;
+    margin: 10px 8px 2px; padding: 6px 10px;
+    border-radius: 8px; background: #F7F4EE;
+    font-size: 11.5px; color: var(--ink-2);
+  }
+  .light-bar i {
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 1px solid rgba(0,0,0,.15); flex: none;
+  }
+  .light-bar b { color: var(--ink); font-weight: 600; }
+  .light-bar em { font-style: normal; color: var(--ink-3); }
   .palette-strip {
     display: flex; height: 46px; gap: 2px;
     margin: 10px 8px 6px; border-radius: 10px; overflow: hidden;
@@ -2086,6 +2098,7 @@
       </div>
       <div class="result-pane">
         <div class="mark-card" id="markCard" hidden></div>
+        <div class="light-bar" id="lightBar" hidden></div>
         <div class="palette-strip" id="paletteStrip"></div>
         <div class="result-title" id="resultTitle">分析结果</div>
         <div id="clusterList"></div>

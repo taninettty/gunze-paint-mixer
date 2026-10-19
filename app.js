@@ -1349,13 +1349,31 @@
     var k = Number($('clusterK').value) || 6;
     var ignoreBg = $('bgToggle').checked && photo.bg;
 
-    var gain = null;
-    if ($('wbToggle').checked) {
-      gain = photo.whiteRef ? E.wbGain(photo.whiteRef) : E.shadesOfGray(photo.samples, 6);
-    }
+    // 始终估一次光源，用来显示"这张图什么光"
+    var estGain = photo.whiteRef ? E.wbGain(photo.whiteRef) : E.shadesOfGray(photo.samples, 6);
+    var useWB = $('wbToggle').checked;
+    var gain = useWB ? estGain : null;
 
     var t0 = now();
     var res = E.analyzeImage(photo.samples, { k: k, gain: gain });
+
+    var light = E.estimateLight(estGain);
+    var lb = $('lightBar');
+    if (lb) {
+      if (light) {
+        lb.hidden = false;
+        lb.innerHTML = '';
+        var dot = document.createElement('i');
+        dot.style.background = light.swatch;
+        var txt = document.createElement('span');
+        txt.innerHTML = '光源 <b>' + light.label + '</b>（约 ' + light.cct + 'K）' +
+          (useWB ? ' <em>· 已自动校正</em>' : ' <em>· 未校正</em>');
+        lb.appendChild(dot);
+        lb.appendChild(txt);
+      } else {
+        lb.hidden = true;
+      }
+    }
 
     var cv = $('photoCanvas');
     photo.gain = res.gain;

@@ -436,6 +436,18 @@ const hv = E.shadeVariants('#B79764');
 check('高光更亮', hv[0].lab[0] > baseLab[0] + 5, 'L ' + hv[0].lab[0].toFixed(0));
 check('阴影更暗', hv[2].lab[0] < baseLab[0] - 5, 'L ' + hv[2].lab[0].toFixed(0));
 
+console.log('\n[26] 光源色温');
+function litGain(rgb) { const s = []; for (let i = 0; i < 300; i++) s.push(rgb); return E.shadesOfGray(s, 6); }
+const warmL = E.estimateLight(litGain([255, 180, 107]));
+const coolL = E.estimateLight(litGain([201, 221, 255]));
+const neutralL = E.estimateLight(litGain([255, 238, 221]));
+
+check('暖光判为暖', warmL.cct < 4000 && warmL.label.indexOf('暖') >= 0, warmL.label + ' ' + warmL.cct + 'K');
+check('冷光判为冷', coolL.cct > 6500 && coolL.label.indexOf('冷') >= 0, coolL.label + ' ' + coolL.cct + 'K');
+check('中性光不偏', neutralL.label === '接近中性', neutralL.label + ' ' + neutralL.cct + 'K');
+check('暖光比冷光低', warmL.cct < coolL.cct - 2000, warmL.cct + ' vs ' + coolL.cct);
+check('给出光源色块', /^#[0-9A-F]{6}$/i.test(warmL.swatch), warmL.swatch);
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

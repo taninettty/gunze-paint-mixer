@@ -2387,6 +2387,53 @@ var assign = new Array(pts.length).fill(0);
     ];
   }
 
+
+  /**
+   * 从白平衡增益反推光源色温（McCamy 近似）。
+   *
+   * gain 是把画面校回中性所需的乘数，取倒数就是光源本身的颜色。
+   * 只用于提示"这张图什么光"，不参与计算。
+   */
+  function estimateLight(gain) {
+    if (!gain || !gain[0] || !gain[1] || !gain[2]) return null;
+
+    var ir = 1 / gain[0], ig = 1 / gain[1], ib = 1 / gain[2];
+    ir /= ig; ib /= ig; ig = 1;
+
+    var X = 0.4124 * ir + 0.3576 * ig + 0.1805 * ib;
+    var Y = 0.2126 * ir + 0.7152 * ig + 0.0722 * ib;
+    var Z = 0.0193 * ir + 0.1192 * ig + 0.9505 * ib;
+
+    var sum = X + Y + Z;
+    if (!sum) return null;
+
+    var x = X / sum, y = Y / sum;
+    var n = (x - 0.3320) / (0.1858 - y);
+    var cct = 449 * n * n * n + 3525 * n * n + 6823.3 * n + 5520.33;
+
+    if (!isFinite(cct)) return null;
+    cct = Math.max(1500, Math.min(15000, cct));
+
+    var label = cct < 3300 ? '很暖' : cct < 4500 ? '偏暖'
+      : cct < 6000 ? '接近中性' : cct < 7500 ? '偏冷' : '很冷';
+
+    // 光源色：把倒数归一化到最亮通道，再转 sRGB
+    var inv = [1 / gain[0], 1 / gain[1], 1 / gain[2]];
+    var mx = Math.max(inv[0], inv[1], inv[2]) || 1;
+    var swatch = [
+      linToSrgb(Math.min(1, inv[0] / mx)),
+      linToSrgb(Math.min(1, inv[1] / mx)),
+      linToSrgb(Math.min(1, inv[2] / mx))
+    ];
+
+    return {
+      cct: Math.round(cct / 50) * 50,
+      label: label,
+      warm: cct < 5000,
+      swatch: rgbToHex(swatch[0], swatch[1], swatch[2])
+    };
+  }
+
   /** 把颜色说成金属名：香槟金、黄铜、红铜、枪铁…… */
   function metalName(lab) {
     var L = lab[0];
@@ -2423,6 +2470,7 @@ var assign = new Array(pts.length).fill(0);
     PRESETS: PRESETS,
     solve: solve,
     nearestPaint: nearestPaint,
+    estimateLight: estimateLight,
     metalName: metalName,
     shadeVariants: shadeVariants,
     nearestPaints: nearestPaints,
