@@ -616,6 +616,7 @@
     text-align: center; border: 1px solid rgba(0,0,0,.22);
     box-shadow: 0 1px 5px rgba(0,0,0,.35);
   }
+  .img-meta { font-size: 10.5px; color: var(--ink-3); margin-left: 6px; }
   .mode-row {
     display: flex; align-items: center; gap: 6px;
     margin-top: 10px; flex-wrap: wrap;
@@ -1136,7 +1137,7 @@
         <div class="mode-row" id="modeRow" hidden>
           <button type="button" class="mode active" data-mode="mask">分区图</button>
           <button type="button" class="mode" data-mode="photo">原图</button>
-          <span class="mode-tip">鼠标移到右边色块上，图上会高亮对应区域</span>
+          <span class="img-meta" id="imgMeta"></span><span class="mode-tip">鼠标移到右边色块上，图上会高亮对应区域</span>
         </div>
         <p class="gloss" id="glossLine"></p>
         <p class="hint" id="photoHint">先选一张模型照片；点画面任意位置可以取单点色。</p>

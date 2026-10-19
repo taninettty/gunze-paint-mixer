@@ -1292,6 +1292,7 @@
       ctx.drawImage(img, 0, 0, w, h);
 
       photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+      if ($('imgMeta')) $('imgMeta').textContent = '已载入 ' + img.width + '×' + img.height;
 
       // 顺带判断：整张图是不是几乎一个颜色（纯色截图、透明底）
       (function () {
