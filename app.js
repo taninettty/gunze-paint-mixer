@@ -2805,44 +2805,145 @@
         $('snrVerdict').textContent = verdict;
       }
 
-      // 建议栏：把数字翻译成动作
-      var tips = [];
-      if (activeColors >= 6) {
-        tips.push(['颜色偏多（' + activeColors + ' 种）', '把次要面的颜色归到主色，只保留一处点缀。']);
+      // 建议：先排序，只留最该改的三条，每条给硬指标和动作
+      var issues = [];
+
+      function addIssue(sev, title, why, doit, dont) {
+        issues.push({ sev: sev, t: title, w: why, d: doit, n: dont });
       }
-      var accentShare2 = (rep.layers.filter(function (L) { return L.name === '点缀层'; })[0] || {}).share || 0;
-      if (accentShare2 > 0.2) {
-        tips.push(['点缀占 ' + Math.round(accentShare2 * 100) + '%', '降到 10–20%，否则它已经不是点缀而是第二主色。']);
+
+      // ---------- 构图 ----------
+      var bgL = rep.layers.filter(function (L) { return L.name === '背景层'; })[0];
+      if (bgL && bgL.share > 0.45) {
+        addIssue(bgL.share - 0.45, '背景太大',
+          '背景占 ' + Math.round(bgL.share * 100) + '%，模型只占 ' + Math.round((1 - bgL.share) * 100) + '%。看的人第一眼看到的是布，不是模型。',
+          ['裁图：把左右各切掉约 ' + Math.round((bgL.share - 0.45) * 50) + '%，让模型顶到画面 55% 以上',
+           '重拍：走近到模型占画面 2/3，或者把镜头拉近一档',
+           '换背景：用比模型暗两档的布，背景面积不变但不再抢眼'],
+          '别用调色救。背景面积不改，压暗也只是把布变黑，模型还是那么小。');
       }
-      if (lRange < 30) {
-        tips.push(['明度差只有 ' + Math.round(lRange), '加深阴影或提亮高光，让远看也有块面对比。']);
+
+      // ---------- 明度 ----------
+      var darkS = 0, lightS = 0;
+      merged.forEach(function (c) {
+        if (c.lab[0] < 35) darkS += c.share;
+        if (c.lab[0] > 80) lightS += c.share;
+      });
+
+      if (darkS < 0.18) {
+        addIssue((0.18 - darkS) * 2, '暗部不足',
+          '暗部只占 ' + Math.round(darkS * 100) + '%，低于 18%。整件会发飘，照片像贴纸。',
+          ['把所有缝隙、内侧、背光面统一压到 L* 30 以下',
+           '在每道分色线加一条暗边，宽度 1–2mm 就够',
+           '背景先压暗两档，暗部占比会立刻上来'],
+          '别再提亮高光。亮部加得越多，暗部占比越低，越平。');
       }
-      if (bs.share < 0.6) {
-        tips.push(['结构占比 ' + Math.round(bs.share * 100) + '%', '细节在抢戏：减少水贴/刻线密度，或把背景压暗压糊。']);
+
+      if (lightS > 0.45) {
+        addIssue((lightS - 0.45) * 1.5, '亮部过多',
+          '亮部占 ' + Math.round(lightS * 100) + '%，高光铺开就不是高光，是整体发白。',
+          ['高光改成点或线：只留棱边和正面受光的一小块',
+           '中间调整体降一档，让高光重新拉开对比',
+           '如果是拍照问题，曝光降 0.7 档再拍'],
+          '别靠加阴影去压亮部——那会把中间调一起压死。');
       }
-      var bgLayer3 = rep.layers.filter(function (L) { return L.name === '背景层'; })[0];
-      if (bgLayer3 && bgLayer3.share > 0.55) {
-        tips.push(['背景占 ' + Math.round(bgLayer3.share * 100) + '%', '模型在画面里偏小，靠近一点拍或裁掉一圈。']);
+
+      // ---------- 颜色 ----------
+      if (cEnt > 5.2) {
+        addIssue((cEnt - 5.2) * 2, '颜色失控',
+          '颜色熵 ' + cEnt.toFixed(1) + ' bit，超过照片常见上限 5.2。每多一种色，注意力就分走一份。',
+          ['砍到 3 种：主色 + 一个辅色 + 一处点缀',
+           '把相近的两种（比如两个灰、两个棕）合成一种',
+           '把某一类色统一成同一支漆的深浅两档'],
+          '别用"加一个对比色"来救。颜色已经多了，再加只会更散。');
       }
-      var mainShare = (rep.layers.filter(function (L) { return L.name === '主色层'; })[0] || {}).share || 0;
-      if (mainShare && mainShare < 0.4) {
-        tips.push(['主色只占 ' + Math.round(mainShare * 100) + '%', '主色撑不起画面，扩大它的面积或减少其它颜色。']);
+
+      if (cEnt < 3.0) {
+        addIssue((3.0 - cEnt) * 1.5, '颜色太单调',
+          '颜色熵只有 ' + cEnt.toFixed(1) + ' bit，形体和颜色都是同一路，远看没有层次。',
+          ['加一种低饱和的对比色，面积控制在 8% 以内',
+           '同色系拆三档：底色、暗部、高光各用一支',
+           '用光泽差代替色差：一块光泽、一块消光'],
+          '别大改配色。单调的问题靠"一处对比"就能破，不需要重做。');
       }
-      if (!tips.length) {
-        tips.push(['各项都在参考区间内', '按现在的思路做即可，注意别再加信息。']);
+
+      var accentS = (rep.layers.filter(function (L) { return L.name === '点缀层'; })[0] || {}).share || 0;
+      if (accentS > 0.2) {
+        addIssue((accentS - 0.2) * 2, '点缀变成第二主色',
+          '点缀占 ' + Math.round(accentS * 100) + '%，超过 20% 就不是点缀，是第二主色。',
+          ['砍掉一半，只留一处：天线、武器或胸口的一个标识',
+           '把散在各处的小色块收到同一个区域',
+           '如果这个色确实重要，就把它升成辅色，重新分配 60-30-10'],
+          '别两个都留。两个都重要等于两个都不重要。');
       }
+
+      // ---------- 细节 ----------
+      if (bs.share < 0.55) {
+        addIssue((0.55 - bs.share) * 2, '细节压过形体',
+          '结构占比 ' + Math.round(bs.share * 100) + '%，低于 55%。对比能量大半落在刻线、水贴、颗粒上，远看是一团。',
+          ['水贴砍一半，只留最有辨识度的几个',
+           '旧化集中在底部 1/3，别全件铺',
+           '把背景压暗压糊，让细节退到后面'],
+          '别再加刻线或分色。现在缺的是留白，不是细节。');
+      }
+
+      if (bs.share > 0.95 && cEnt < 4.0) {
+        addIssue(1.2, '画面太素',
+          '结构 ' + Math.round(bs.share * 100) + '%、颜色熵 ' + cEnt.toFixed(1) + ' bit，形体和颜色都平。',
+          ['在一个次要面加一处对比（低饱和，面积 5%）',
+           '加一道金属边或分色线，制造一条视线',
+           '靠光泽差做层次：同一色，一块光泽一块消光'],
+          '别整件加深或整件提亮——那只会让平的地方更平。');
+      }
+
+      // 排优先级，只留三条
+      issues.sort(function (x, y) { return y.sev - x.sev; });
+      var top = issues.slice(0, 3);
 
       var advBox = $('snrAdvice');
       var advList = $('snrAdviceList');
       if (advBox && advList) {
         advBox.hidden = false;
         advList.innerHTML = '';
-        tips.forEach(function (t) {
+
+        if (!top.length) {
+          var li0 = document.createElement('li');
+          var b0 = document.createElement('b');
+          b0.textContent = '没有硬伤';
+          li0.appendChild(b0);
+          var s0 = document.createElement('span');
+          s0.className = 'why';
+          s0.textContent = '各项都在区间内。想再往前一步，就做减法：去掉一个颜色、收掉一处细节。';
+          li0.appendChild(s0);
+          advList.appendChild(li0);
+        }
+
+        top.forEach(function (it, idx) {
           var li = document.createElement('li');
+          li.className = idx === 0 ? 'top' : '';
+
           var b = document.createElement('b');
-          b.textContent = t[0];
+          b.textContent = (idx === 0 ? '最该改：' : '') + it.t;
           li.appendChild(b);
-          li.appendChild(document.createTextNode(t[1]));
+
+          var why = document.createElement('span');
+          why.className = 'why';
+          why.textContent = it.w;
+          li.appendChild(why);
+
+          var ul = document.createElement('ul');
+          it.d.forEach(function (o) {
+            var sub = document.createElement('li');
+            sub.textContent = o;
+            ul.appendChild(sub);
+          });
+          li.appendChild(ul);
+
+          var no = document.createElement('span');
+          no.className = 'dont';
+          no.textContent = it.n;
+          li.appendChild(no);
+
           advList.appendChild(li);
         });
       }

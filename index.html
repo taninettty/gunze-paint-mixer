@@ -633,6 +633,12 @@
   .snr-advice li { font-size: 11.5px; line-height: 1.65; padding: 6px 0; border-bottom: 1px dashed var(--line); color: var(--ink-2); }
   .snr-advice li:last-child { border-bottom: none; }
   .snr-advice li b { color: var(--ink); display: block; margin-bottom: 2px; }
+  .snr-advice li .why { display: block; font-size: 11px; color: var(--ink-3); margin-bottom: 4px; }
+  .snr-advice li ul { margin: 0 0 2px 0; padding-left: 14px; }
+  .snr-advice li ul li { border: none; padding: 2px 0; font-size: 11px; list-style: disc; }
+  .snr-advice li.top { border-left: 3px solid #B4530A; padding-left: 8px; margin-left: -8px; }
+  .snr-advice li.top b { color: #B4530A; }
+  .snr-advice .dont { display: block; margin-top: 4px; font-size: 11px; color: #8A3B2E; }
   .snr-ref { font-size: 10.5px; color: var(--ink-3); margin: 10px 0 0; line-height: 1.6; padding-top: 8px; border-top: 1px solid var(--line); }
   .snr-lead { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.7; }
   .snr-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -1392,7 +1398,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v5.0 · 2026-10</span>
+  <span class="ver" id="appVer">v5.2 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1457,11 +1463,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=5.0"></script>
-  <script src="gunze-data.js?v=5.0"></script>
-  <script src="engine-data.js?v=5.0"></script>
-  <script src="engine-light.js?v=5.0"></script>
-<script src="engine.js?v=5.0"></script>
-<script src="app.js?v=5.0"></script>
+<script src="kb-data.js?v=5.2"></script>
+  <script src="gunze-data.js?v=5.2"></script>
+  <script src="engine-data.js?v=5.2"></script>
+  <script src="engine-light.js?v=5.2"></script>
+<script src="engine.js?v=5.2"></script>
+<script src="app.js?v=5.2"></script>
 </body>
 </html>
