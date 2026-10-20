@@ -646,6 +646,12 @@
   .snr-advice li.top { border-left: 3px solid #B4530A; padding-left: 8px; margin-left: -8px; }
   .snr-advice li.top b { color: #B4530A; }
   .snr-advice .dont { display: block; margin-top: 4px; font-size: 11px; color: #8A3B2E; }
+  .snr-recipe { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .snr-recipe h5 { font-size: 11px; margin: 0 0 6px; color: var(--ink-3); font-weight: 600; }
+  .snr-recipe table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .snr-recipe th { text-align: left; font-weight: 500; color: var(--ink-3); padding: 2px 4px 2px 0; border-bottom: 1px solid var(--line); }
+  .snr-recipe td { padding: 3px 4px 3px 0; border-bottom: 1px dashed var(--line); vertical-align: top; }
+  .snr-recipe .rs-sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,.12); vertical-align: -1px; margin-right: 3px; }
   .snr-ref { font-size: 10.5px; color: var(--ink-3); margin: 10px 0 0; line-height: 1.6; padding-top: 8px; border-top: 1px solid var(--line); }
   .snr-lead { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.7; }
   .snr-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
@@ -1373,6 +1379,7 @@
         <aside class="snr-advice" id="snrAdvice" hidden>
           <h4>建议</h4>
           <ul id="snrAdviceList"></ul>
+          <div class="snr-recipe" id="snrRecipe" hidden></div>
           <p class="snr-ref">
             参考：鲜艳度 44–50、颜色熵 4.6–5.2 bit（VPF 论文实测）；<br>
             中心占比无统一标准，只看改前改后；结构占比同理。
@@ -1405,7 +1412,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v5.4 · 2026-10</span>
+  <span class="ver" id="appVer">v5.5 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1471,11 +1478,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=5.4"></script>
-  <script src="gunze-data.js?v=5.4"></script>
-  <script src="engine-data.js?v=5.4"></script>
-  <script src="engine-light.js?v=5.4"></script>
-<script src="engine.js?v=5.4"></script>
-<script src="app.js?v=5.4"></script>
+<script src="kb-data.js?v=5.5"></script>
+  <script src="gunze-data.js?v=5.5"></script>
+  <script src="engine-data.js?v=5.5"></script>
+  <script src="engine-light.js?v=5.5"></script>
+<script src="engine.js?v=5.5"></script>
+<script src="app.js?v=5.5"></script>
 </body>
 </html>

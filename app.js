@@ -3067,6 +3067,72 @@
         });
       }
 
+      // 复刻清单：把这几块色按明暗排成受光→深阴影
+      (function () {
+        var box = $('snrRecipe');
+        if (!box) return;
+
+        if (merged.length < 2) { box.hidden = true; return; }
+
+        var sorted = merged.slice().sort(function (x, y) { return y.lab[0] - x.lab[0]; });
+        var roles = ['受光面', '中间色', '暗部', '深阴影'];
+        var mainIdx = 0;
+        sorted.forEach(function (c, k) { if (c.share > sorted[mainIdx].share) mainIdx = k; });
+
+        var ids = E.PIGMENTS.map(function (p) { return p.id; });
+
+        box.hidden = false;
+        box.innerHTML = '';
+
+        var ttl = document.createElement('h5');
+        ttl.textContent = '复刻清单 · 按 2ml 配';
+        box.appendChild(ttl);
+
+        var table = document.createElement('table');
+        var tbody = document.createElement('tbody');
+
+        sorted.slice(0, 4).forEach(function (c, k) {
+          var near = E.nearestPaint(c.hex) || null;
+          var paint = near && near.pigment ? near.pigment : null;
+          var rec = paint ? E.tintRecipe(paint.hex, c.hex, ids, { volume: 2 }) : null;
+
+          var addTxt = '—';
+          if (rec && rec.items) {
+            var parts = rec.items.filter(function (it) { return it.drops > 0; })
+              .slice(0, 2)
+              .map(function (it) { return it.pigment.code + ' ' + it.drops + ' 滴'; });
+            addTxt = parts.length ? parts.join(' + ') : '不用加';
+          }
+
+          var tr = document.createElement('tr');
+
+          var td0 = document.createElement('td');
+          td0.textContent = roles[k] + (k === mainIdx ? '·主' : '');
+          tr.appendChild(td0);
+
+          var td1 = document.createElement('td');
+          var sw = document.createElement('i');
+          sw.className = 'rs-sw';
+          sw.style.background = c.hex;
+          td1.appendChild(sw);
+          td1.appendChild(document.createTextNode(Math.round(c.share * 100) + '%'));
+          tr.appendChild(td1);
+
+          var td2 = document.createElement('td');
+          td2.textContent = paint ? paint.code : '—';
+          tr.appendChild(td2);
+
+          var td3 = document.createElement('td');
+          td3.textContent = addTxt;
+          tr.appendChild(td3);
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        box.appendChild(table);
+      })();
+
       var list = $('snrColors');
       list.innerHTML = '';
 
