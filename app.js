@@ -2618,7 +2618,8 @@
 
       var k = Number($('snrK').value) || 6;
       var res = E.analyzeImage(last.samples, { k: k });
-      var rep = E.layerReport(res.clusters);
+      var merged = E.mergeSimilar(res.clusters, 6);
+      var rep = E.layerReport(merged);
 
       if (!rep) {
         $('snrEmpty').hidden = false;
@@ -2633,7 +2634,7 @@
         L.colors.forEach(function (c) { colorToLayer[c.hex] = L.id; });
       });
 
-      var centers = res.clusters.map(function (c) {
+      var centers = merged.map(function (c) {
         return { rgb: E.hexToRgb(c.hex), layer: colorToLayer[c.hex] || 'accent' };
       });
 
@@ -2664,8 +2665,11 @@
       $('snrBody').hidden = false;
 
       $('snrRatio').textContent = rep.activeCount + ' 层';
+      var activeL = rep.layers.filter(function (L) { return L.active; });
       $('snrEffective').textContent = rep.gaps.length
-        ? '相邻层色差 ' + rep.gaps.map(function (g) { return g.toFixed(0); }).join(' / ')
+        ? rep.gaps.map(function (g, i) {
+            return activeL[i].name.replace('层', '') + '→' + activeL[i + 1].name.replace('层', '') + ' ' + g.toFixed(0);
+          }).join(' · ')
         : '';
       $('snrVerdict').textContent = rep.verdict;
 
@@ -2677,26 +2681,28 @@
 
         var li = document.createElement('li');
 
-        var sw = document.createElement('i');
-        sw.className = 'sw';
-        sw.style.background = L.hex;
-
         var nm = document.createElement('span');
         nm.className = 'hx';
+        nm.style.fontWeight = '600';
+        nm.style.color = 'var(--ink)';
         nm.textContent = L.name;
 
-        var sub = document.createElement('span');
-        sub.className = 'hx';
-        sub.style.color = 'var(--ink-3)';
-        sub.textContent = L.colors.length + ' 色';
+        var sws = document.createElement('span');
+        sws.className = 'snr-sws';
+        L.colors.forEach(function (c) {
+          var s = document.createElement('i');
+          s.className = 'sw';
+          s.style.background = c.hex;
+          s.title = c.hex + ' · ' + Math.round(c.share * 100) + '%';
+          sws.appendChild(s);
+        });
 
         var sh = document.createElement('span');
         sh.className = 'sh';
         sh.textContent = Math.round(L.share * 100) + '%';
 
-        li.appendChild(sw);
         li.appendChild(nm);
-        li.appendChild(sub);
+        li.appendChild(sws);
         li.appendChild(sh);
         list.appendChild(li);
       });

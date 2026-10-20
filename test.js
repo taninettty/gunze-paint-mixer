@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -653,6 +653,10 @@ console.log('\n[34] 导出函数清单');
     wbGain: () => E.wbGain([200, 180, 160]),
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    mergeSimilar: () => E.mergeSimilar([
+      { hex: '#E8C24A', share: 0.6, lab: [80, 5, 60] },
+      { hex: '#E0BA45', share: 0.4, lab: [78, 5, 58] }
+    ], 6),
     layerReport: () => E.layerReport([
       { hex: '#E8E4DC', share: 0.5, lab: [91, 0, 0] },
       { hex: '#B79764', share: 0.3, lab: [64, 5, 31] },
@@ -750,6 +754,18 @@ console.log('\n[37] 分层');
   var accents = E.layerReport([mk3('#E8E4DC', 0.4), mk3('#B79764', 0.3), mk3('#C0392B', 0.3)]);
   check('背景也算层，不单独剔除', accents.layers[0].name === '底色层' && accents.layers[0].colors.length >= 1,
     accents.layers[0].name + ' ' + accents.layers[0].colors.length);
+}
+
+console.log('\n[38] 相近色合并');
+{
+  var mk4 = function (hex, share) { return { hex: hex, share: share, lab: E.labOfHex(hex) }; };
+
+  var same = E.mergeSimilar([mk4('#E8C24A', 0.35), mk4('#E0BA45', 0.30), mk4('#3A5C88', 0.25), mk4('#FFFFFF', 0.10)], 6);
+  check('相近的黄色合成一个', same.length === 3, same.length + ' 块');
+  check('合并后占比相加', Math.abs(same[0].share - 0.65) < 0.01, same[0].share.toFixed(2));
+
+  var diff = E.mergeSimilar([mk4('#E8C24A', 0.5), mk4('#3A5C88', 0.5)], 6);
+  check('差别大的不合并', diff.length === 2, diff.length + ' 块');
 }
 
 console.log('\n[22] 性能');

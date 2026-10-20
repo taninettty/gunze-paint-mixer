@@ -2175,6 +2175,25 @@ var assign = new Array(pts.length).fill(0);
 
 
 
+
+  /** 把 ΔE 很小的色块合并成一个（同一块漆的明暗被拆成两个时会出现） */
+  function mergeSimilar(clusters, threshold) {
+    var th = threshold == null ? 6 : threshold;
+    var out = [];
+    clusters.slice().sort(function (a, b) { return b.share - a.share; }).forEach(function (c) {
+      var lab = c.lab || labOfHex(c.hex);
+      for (var i = 0; i < out.length; i++) {
+        if (deltaE00(out[i].lab, lab) < th) {
+          out[i].share += c.share;
+          out[i].merged = (out[i].merged || 1) + 1;
+          return;
+        }
+      }
+      out.push({ hex: c.hex, share: c.share, lab: lab, merged: 1 });
+    });
+    return out;
+  }
+
   /**
    * 分层：按面积占比把颜色分成「底色层 / 主体层 / 点缀层」。
    *
@@ -2207,6 +2226,18 @@ var assign = new Array(pts.length).fill(0);
       acc += c.share;
     });
 
+    // 按总占比重新命名：底色层必须是最大的那组
+    var NAMES = ['底色层', '主体层', '点缀层'];
+    var ranked = layers.filter(function (L) {
+      return L.colors.length > 0;
+    }).sort(function (a, b) { return b.share - a.share; });
+
+    var renamed = [];
+    ranked.forEach(function (L, i) {
+      L.name = NAMES[i] || ('第 ' + (i + 1) + ' 层');
+      renamed.push(L);
+    });
+
     // 每层的代表色：该层里占比最大的那个
     layers.forEach(function (L) {
       L.active = L.colors.length > 0;
@@ -2237,8 +2268,8 @@ var assign = new Array(pts.length).fill(0);
     }
 
     return {
-      layers: layers,
-      activeCount: active.length,
+      layers: renamed,
+      activeCount: renamed.length,
       gaps: gaps,
       minGap: minGap,
       verdict: verdict
@@ -2453,6 +2484,7 @@ var assign = new Array(pts.length).fill(0);
     noiseReport: noiseReport,
     snrReport: snrReport,
     layerReport: layerReport,
+    mergeSimilar: mergeSimilar,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,
