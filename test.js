@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', regionSnr: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', regionSnr: 'function', bandSnr: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -657,6 +657,11 @@ console.log('\n[34] 导出函数清单');
       var w = 32, h = 32, l = new Float32Array(w * h);
       for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) l[y * w + x] = x < 16 ? 0.2 : 0.8;
       return E.segmentRegions(l, w, h, { minArea: 40 });
+    },
+    bandSnr: () => {
+      var l = new Float32Array(64 * 64);
+      for (var y = 0; y < 64; y++) for (var x = 0; x < 64; x++) l[y * 64 + x] = x / 64;
+      return E.bandSnr(l, 64, 64, { levels: 3, radius: 2 });
     },
     regionSnr: () => {
       var w = 32, h = 32, l = new Float32Array(w * h);
@@ -828,6 +833,26 @@ console.log('\n[40] 先分区再算区域内部');
   var one = img(function () { return 0.5; });
   var segOne = E.segmentRegions(one, W, H, { minArea: 200 });
   check('纯色只有一块区域', segOne.regions.length === 1, segOne.regions.length + ' 区');
+}
+
+console.log('\n[41] 频带信噪比');
+{
+  var W = 200, H = 200;
+  function mk(fn) { var l = new Float32Array(W * H); for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) l[y * W + x] = fn(x, y); return l; }
+
+  var ramp = E.bandSnr(mk(function (x) { return x / W; }), W, H, { levels: 3, radius: 2 });
+  check('渐变几乎全是结构', ramp.share > 0.9, (ramp.share * 100).toFixed(0) + '%');
+
+  var blocks = E.bandSnr(mk(function (x) { return x < 100 ? 0.2 : 0.8; }), W, H, { levels: 3, radius: 2 });
+  check('大色块也算结构', blocks.share > 0.9, (blocks.share * 100).toFixed(0) + '%');
+
+  var stripes = E.bandSnr(mk(function (x) { return (x % 4) < 2 ? 0.3 : 0.7; }), W, H, { levels: 3, radius: 2 });
+  check('细条纹算纹理', stripes.share < 0.1, (stripes.share * 100).toFixed(1) + '%');
+
+  var noise = E.bandSnr(mk(function () { return Math.random(); }), W, H, { levels: 3, radius: 2 });
+  check('随机噪声算纹理', noise.share < 0.1, (noise.share * 100).toFixed(1) + '%');
+
+  check('结构占比在 0~1 之间', ramp.share <= 1 && stripes.share >= 0, ramp.share.toFixed(2) + ' / ' + stripes.share.toFixed(2));
 }
 
 console.log('\n[22] 性能');

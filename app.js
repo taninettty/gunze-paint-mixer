@@ -2639,7 +2639,7 @@
 
       var k = Number($('snrK').value) || 6;
 
-      // 两步卷积：先找边界分区，再在区域内部算均匀度
+      // 频带信噪比：固定金字塔分带，无阈值
       var w = last.w, h = last.h;
       var luma = new Float32Array(w * h);
       for (var li = 0; li < w * h; li++) {
@@ -2647,71 +2647,51 @@
         luma[li] = (last.data[lp] * 0.299 + last.data[lp + 1] * 0.587 + last.data[lp + 2] * 0.114) / 255;
       }
 
-      var seg = E.segmentRegions(luma, w, h, { minArea: Math.max(60, Math.round(w * h / 300)) });
-      var rs = E.regionSnr(luma, w, h, seg, { radius: 3 });
+      var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2 });
 
-      // 每个区域一个颜色，边界画深
+      // 分区图（只作可视化，不参与打分）
+      var seg = E.segmentRegions(luma, w, h, { minArea: Math.max(60, Math.round(w * h / 300)) });
       var octx = $('snrOverlay').getContext('2d');
       octx.clearRect(0, 0, w, h);
-
-      function regionColor(id) {
-        var hue = (id * 137.508) % 360;
-        return 'hsla(' + hue.toFixed(0) + ',55%,58%,0.30)';
-      }
-
-      var img = octx.createImageData(w, h);
-      var d = img.data;
+      var imgData = octx.createImageData(w, h);
+      var dd = imgData.data;
       for (var pi = 0; pi < w * h; pi++) {
         var lab = seg.labels[pi];
         var o = pi * 4;
-        if (seg.isEdge[pi]) { d[o] = 40; d[o + 1] = 38; d[o + 2] = 34; d[o + 3] = 110; continue; }
-        if (lab < 0) { d[o + 3] = 0; continue; }
-        var hue = (lab * 137.508) % 360;
-        var rgb = hslToRgb(hue / 360, 0.55, 0.58);
-        d[o] = rgb[0]; d[o + 1] = rgb[1]; d[o + 2] = rgb[2]; d[o + 3] = 80;
+        if (seg.isEdge[pi]) { dd[o] = 46; dd[o + 1] = 44; dd[o + 2] = 40; dd[o + 3] = 130; continue; }
+        if (lab < 0) { dd[o + 3] = 0; continue; }
+        var rgb = hslToRgb(((lab * 137.508) % 360) / 360, 0.55, 0.58);
+        dd[o] = rgb[0]; dd[o + 1] = rgb[1]; dd[o + 2] = rgb[2]; dd[o + 3] = 70;
       }
-      octx.putImageData(img, 0, 0);
+      octx.putImageData(imgData, 0, 0);
 
-      // 颜色分层（参考）
+      // 颜色分层（参考信息）
       var res = E.analyzeImage(last.samples, { k: k });
       var merged = E.mergeSimilar(res.clusters, 6);
       var rep = E.layerReport(merged);
+
+      var activeColors = rep.layers.reduce(function (n, L) { return n + L.colors.length; }, 0);
+      var lMin = 101, lMax = -1;
+      merged.forEach(function (c) {
+        var lb = c.lab[0];
+        if (lb < lMin) lMin = lb;
+        if (lb > lMax) lMax = lb;
+      });
+      var lRange = lMax - lMin;
 
       $('snrEmpty').hidden = true;
       $('snrStage').hidden = false;
       $('snrBody').hidden = false;
 
-      // 美术视角：数"视觉信息"，不算 dB
-      var activeColors = rep.layers.reduce(function (n, L) { return n + L.colors.length; }, 0);
-      var accentShare = (rep.layers[2] && rep.layers[2].active) ? rep.layers[2].share : 0;
-
-      var lMin = 101, lMax = -1;
-      merged.forEach(function (c) {
-        var l = c.lab[0];
-        if (l < lMin) lMin = l;
-        if (l > lMax) lMax = l;
-      });
-      var lRange = lMax - lMin;
-
-      $('snrRatio').textContent = activeColors + ' 色';
-      $('snrEffective').textContent = '分区 ' + rs.regionCount + ' 块 · 明度差 ' +
-        Math.round(lRange) + ' · 点缀 ' + Math.round(accentShare * 100) + '%';
-
-      var warns = [];
-      if (activeColors >= 6) warns.push('颜色 ' + activeColors + ' 种，比"主色 + 点缀"多了不少');
-      if (rs.regionCount >= 10) warns.push('分成 ' + rs.regionCount + ' 块，图案偏碎');
-      if (accentShare > 0.2) warns.push('点缀占了 ' + Math.round(accentShare * 100) + '%，已经不算点缀');
-      if (lRange < 25) warns.push('明度只差 ' + Math.round(lRange) + '，远看会糊成一片');
+      $('snrRatio').textContent = Math.round(bs.share * 100) + '%';
+      $('snrEffective').textContent = '结构占比 · ' + bs.db.toFixed(1) + ' dB · ' +
+        activeColors + ' 色 / ' + rep.activeCount + ' 层 / 明度差 ' + Math.round(lRange);
 
       var verdict;
-      if (!warns.length) {
-        verdict = '视觉信息克制：' + activeColors + ' 色、' + rs.regionCount + ' 块，主次分得开。';
-      } else {
-        verdict = '信息偏多：' + warns.join('；') + '。';
-      }
-
-      $('snrVerdict').textContent = verdict +
-        '（内部均匀度：区域间/内 = ' + (rs.ratio >= 100 ? Math.round(rs.ratio) : rs.ratio.toFixed(1)) + ' : 1）';
+      if (bs.share >= 0.75) verdict = '对比主要在形体上：远看能看出块面，细节没抢戏。';
+      else if (bs.share >= 0.45) verdict = '形体和细节各占一半：还能读，细节再多就糊。';
+      else verdict = '对比主要在细节上：刻线、水贴、颗粒占了上风，退后两步会糊成一片。';
+      $('snrVerdict').textContent = verdict;
 
       var list = $('snrColors');
       list.innerHTML = '';

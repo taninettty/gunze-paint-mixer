@@ -2263,6 +2263,57 @@ var assign = new Array(pts.length).fill(0);
     return out;
   }
 
+  /**
+   * 频带信噪比：固定高斯金字塔分带，不用阈值。
+   *
+   * 结构（信号）= 粗层 + 中频层
+   * 纹理（噪声）= 最细的两层
+   * 全部零均值后算能量，输出 0~1 的占比和 dB。
+   */
+  function bandSnr(luma, w, h, opts) {
+    opts = opts || {};
+    var levels = opts.levels == null ? 3 : opts.levels;
+    var r = opts.radius == null ? 2 : opts.radius;
+
+    var pyr = [luma];
+    for (var i = 0; i < levels; i++) pyr.push(boxBlur(pyr[i], w, h, r));
+
+    function energy(arr) {
+      var n = arr.length, mean = 0, k;
+      for (k = 0; k < n; k++) mean += arr[k];
+      mean /= n;
+      var e = 0;
+      for (k = 0; k < n; k++) { var d = arr[k] - mean; e += d * d; }
+      return e / n;
+    }
+
+    var bandEnergy = [];
+    for (var j = 0; j < levels; j++) {
+      var band = new Float32Array(w * h);
+      for (var p = 0; p < w * h; p++) band[p] = pyr[j][p] - pyr[j + 1][p];
+      bandEnergy.push(energy(band));
+    }
+
+    var eTexture = bandEnergy[0] + (bandEnergy[1] || 0);
+    var eMid = bandEnergy[2] || 0;
+    var eCoarse = energy(pyr[levels]);
+    var eStructure = eCoarse + eMid;
+
+    var total = eStructure + eTexture;
+    var share = total > 1e-12 ? eStructure / total : 0;
+    var db = 10 * Math.log10(Math.max(1e-9, eStructure) / Math.max(1e-9, eTexture));
+
+    return {
+      share: share,
+      db: db,
+      eStructure: eStructure,
+      eTexture: eTexture,
+      eCoarse: eCoarse,
+      eMid: eMid,
+      bandEnergy: bandEnergy
+    };
+  }
+
   /** 连通域标记（边界像元不参与） */
   function segmentRegions(luma, w, h, opts) {
     opts = opts || {};
@@ -2788,6 +2839,7 @@ var assign = new Array(pts.length).fill(0);
     freqSnr: freqSnr,
     segmentRegions: segmentRegions,
     regionSnr: regionSnr,
+    bandSnr: bandSnr,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,
