@@ -80,6 +80,18 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message + '
     var kbTabs = document.querySelector('.kb-tabs');
     out.kbVisible = kbTabs ? getComputedStyle(kbTabs).display !== 'none' : false;
 
+    // 风格按钮
+    (function () {
+      var art = document.querySelector('.style-opt[data-style=\"art\"]');
+      if (!art) return;
+      var before = Array.prototype.map.call(document.querySelectorAll('#shadeRow .shade-card .hx'), function (e) { return e.textContent; }).join();
+      art.click();
+      var after = Array.prototype.map.call(document.querySelectorAll('#shadeRow .shade-card .hx'), function (e) { return e.textContent; }).join();
+      out.styleChanged = before !== after;
+      out.styleActive = (document.querySelector('.style-opt.active') || {}).dataset ? document.querySelector('.style-opt.active').dataset.style : '';
+      document.querySelector('.style-opt[data-style=\"physical\"]').click();
+    })();
+
     // 逐个页签点一遍：每个都要"刚好一个内容块可见且非空"
     var tabs = document.querySelectorAll('.kb-tab');
     var DETAILS = ['airbrush', 'sprayDetail', 'artDetail', 'failDetail'];
@@ -220,6 +232,7 @@ function run() {
   check('买漆清单能展开', r.buyItems > 0, String(r.buyItems));
   check('换底漆会重算分层反推', r.layeredChanged === true, String(r.layeredChanged));
   check('三个顶层页都能显示', (r.pages || '').indexOf('hidden') < 0 && (r.pages || '').split(' ').length === 3, r.pages);
+  check('风格按钮能切换', r.styleChanged === true && r.styleActive === 'art', (r.styleActive || '') + ' · 变化 ' + String(r.styleChanged));
   check('每个页签点开都有内容', (r.tabs || '').indexOf('BAD') < 0 && (r.tabs || '').split(' ').length === 4, r.tabs);
   check('照片分析弹窗能打开', r.modalOpened === true, String(r.modalOpened));
 

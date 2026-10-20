@@ -569,16 +569,18 @@
   }
 
   function setStyle(style) {
+    if (style !== 'physical' && style !== 'art') return;
     state.style = style;
-    [].forEach.call(document.querySelectorAll('.style-opt'), function (b) {
+    [].forEach.call(document.querySelectorAll('.style-opt[data-style]'), function (b) {
       b.classList.toggle('active', b.dataset.style === style);
     });
     renderShades();
   }
 
   function setLight(light) {
+    if (light !== 'warm' && light !== 'neutral' && light !== 'cool') return;
     state.light = light;
-    [].forEach.call(document.querySelectorAll('.light-opt'), function (b) {
+    [].forEach.call(document.querySelectorAll('.light-opt[data-light]'), function (b) {
       b.classList.toggle('active', b.dataset.light === light);
     });
     renderShades();
@@ -1190,8 +1192,11 @@
   function bindPhoto() {
     $('analyzeBtn').addEventListener('click', openModal);
     if ($('dbgBtn')) $('dbgBtn').addEventListener('click', photoDebug);
-    [].forEach.call(document.querySelectorAll('.light-opt'), function (b) {
+    [].forEach.call(document.querySelectorAll('.light-opt[data-light]'), function (b) {
       b.addEventListener('click', function () { setLight(b.dataset.light); });
+    });
+    [].forEach.call(document.querySelectorAll('.style-opt[data-style]'), function (b) {
+      b.addEventListener('click', function () { setStyle(b.dataset.style); });
     });
     $('modalClose').addEventListener('click', closeModal);
 
