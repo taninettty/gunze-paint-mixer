@@ -82,6 +82,52 @@
     return '差别较大';
   }
 
+  function lchOfLab(lab) {
+    var C = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+    var hh = Math.atan2(lab[2], lab[1]) * 180 / Math.PI;
+    if (hh < 0) hh += 360;
+    return { L: lab[0], C: C, h: hh };
+  }
+
+  function hueWord(hh) {
+    if (hh < 15 || hh >= 345) return '红';
+    if (hh < 45) return '橙红';
+    if (hh < 70) return '橙黄';
+    if (hh < 100) return '黄';
+    if (hh < 150) return '黄绿';
+    if (hh < 200) return '绿';
+    if (hh < 250) return '青';
+    if (hh < 290) return '蓝';
+    if (hh < 330) return '紫';
+    return '品红';
+  }
+
+  /** 从目标到预测该怎么调：往哪偏、差多少 */
+  function dirText(targetLab, predLab) {
+    var t = lchOfLab(targetLab), p = lchOfLab(predLab);
+    var dL = p.L - t.L;
+    var dC = p.C - t.C;
+    var dh = ((p.h - t.h + 540) % 360) - 180;
+
+    var parts = [];
+    if (Math.abs(dh) >= 3) {
+      var toward = hueWord(t.h + (dh > 0 ? 50 : -50));
+      parts.push('色相往' + toward + '偏 ' + Math.abs(Math.round(dh)) + '°');
+    }
+    if (Math.abs(dL) >= 2) parts.push((dL > 0 ? '亮' : '暗') + ' ' + Math.abs(Math.round(dL)));
+    if (Math.abs(dC) >= 2) parts.push((dC > 0 ? '艳' : '灰') + ' ' + Math.abs(Math.round(dC)));
+
+    if (!parts.length) return null;
+
+    // 反向指令：要让预测靠近目标，该怎么动
+    var fix = [];
+    if (Math.abs(dh) >= 3) fix.push('色相往' + hueWord(t.h + (dh > 0 ? -50 : 50)) + '拉回来');
+    if (Math.abs(dL) >= 2) fix.push(dL > 0 ? '压暗一点' : '提亮一点');
+    if (Math.abs(dC) >= 2) fix.push(dC > 0 ? '降一点饱和度' : '加一点饱和度');
+
+    return { now: parts.join('、'), fix: fix.join('，') };
+  }
+
   function grade(de, chroma) {
     // 两个都接近中性（白/灰/黑）时色相肉眼难分，ΔE00 会被低彩度下的色相角放大
     var neutral = typeof chroma === 'number' && chroma < 6;
@@ -1027,6 +1073,26 @@
     var pLab = res.predicted.lab || E.labOfHex(res.predicted.hex);
     var chromaAvg = (Math.hypot(tLab[1], tLab[2]) + Math.hypot(pLab[1], pLab[2])) / 2;
     var g = grade(res.deltaE, chromaAvg);
+    var dirBox = $('mixDir');
+    if (dirBox) {
+      var dTxt = res.deltaE < 1.2 ? null : dirText(tLab, pLab);
+      if (dTxt) {
+        dirBox.hidden = false;
+        dirBox.innerHTML = '';
+        var pre = document.createElement('span');
+        pre.textContent = '当前配方 ';
+        dirBox.appendChild(pre);
+        var strong = document.createElement('b');
+        strong.textContent = dTxt.now;
+        dirBox.appendChild(strong);
+        var tail = document.createElement('span');
+        tail.textContent = ' → ' + dTxt.fix + '。';
+        dirBox.appendChild(tail);
+      } else {
+        dirBox.hidden = true;
+      }
+    }
+
     $('deBox').className = 'de ' + g[0];
     $('deValue').textContent = res.deltaE.toFixed(2);
     $('deLabel').textContent = g[1];
@@ -2432,12 +2498,11 @@
     var table = document.createElement('table');
     var thead = document.createElement('thead');
     var trh = document.createElement('tr');
-    ['角色', '目标', '用这支', '加什么', '达到'].forEach(function (label) {
+    ['角色', '占比', '色相', '色温', 'L / C', '相对主色'].forEach(function (label) {
       var th = document.createElement('th');
       th.textContent = label;
       trh.appendChild(th);
     });
-    thead.appendChild(trh);
     table.appendChild(thead);
 
     var tbody = document.createElement('tbody');
@@ -3096,24 +3161,58 @@
         box.innerHTML = '';
 
         var ttl = document.createElement('h5');
-        ttl.textContent = '复刻清单 · 按 2ml 配' + (dropped ? '（已排除背景 ' + dropped + ' 块）' : '');
+        ttl.textContent = '色彩方向' + (dropped ? '（已排除背景 ' + dropped + ' 块）' : '');
         box.appendChild(ttl);
 
         var table = document.createElement('table');
         var tbody = document.createElement('tbody');
 
-        sorted.slice(0, 4).forEach(function (c, k) {
-          var near = E.nearestPaint(c.hex) || null;
-          var paint = near && near.pigment ? near.pigment : null;
-          var rec = paint ? E.tintRecipe(paint.hex, c.hex, ids, { volume: 2 }) : null;
+        // 方向表：色相、色温、明度、彩度，以及相对主色的偏移
+        var mainLab = sorted[mainIdx].lab;
 
-          var addTxt = '—';
-          if (rec && rec.items) {
-            var parts = rec.items.filter(function (it) { return it.drops > 0; })
-              .slice(0, 2)
-              .map(function (it) { return it.pigment.code + ' ' + it.drops + ' 滴'; });
-            addTxt = parts.length ? parts.join(' + ') : '不用加';
-          }
+        function lchOf(lab) {
+          var L = lab[0];
+          var C = Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+          var h = Math.atan2(lab[2], lab[1]) * 180 / Math.PI;
+          if (h < 0) h += 360;
+          return { L: L, C: C, h: h };
+        }
+
+        function hueName(h) {
+          if (h < 15 || h >= 345) return '红';
+          if (h < 45) return '橙红';
+          if (h < 70) return '橙黄';
+          if (h < 100) return '黄';
+          if (h < 150) return '黄绿';
+          if (h < 200) return '绿';
+          if (h < 250) return '青';
+          if (h < 290) return '蓝';
+          if (h < 330) return '紫';
+          return '品红';
+        }
+
+        function tempName(h) {
+          if (h >= 20 && h < 80) return '暖';
+          if (h >= 80 && h < 160) return '中性偏暖';
+          if (h >= 160 && h < 250) return '冷';
+          if (h >= 250 && h < 330) return '冷紫';
+          return '暖红';
+        }
+
+        sorted.slice(0, 4).forEach(function (c, k) {
+          var lch = lchOf(c.lab);
+          var lab = c.lab;
+          var dL = lab[0] - mainLab[0];
+          var dC = lch.C - lchOf(mainLab).C;
+          var dh = ((lch.h - lchOf(mainLab).h + 540) % 360) - 180;
+
+          var mainH = lchOf(mainLab).h;
+          var shift;
+          if (Math.abs(dh) < 5) shift = '同色相';
+          else shift = '偏' + hueName(mainH + (dh > 0 ? 50 : -50)) + ' ' + Math.abs(Math.round(dh)) + '°';
+          var rel = 'ΔL ' + (dL >= 0 ? '+' : '') + dL.toFixed(0) +
+                    ' · ΔC ' + (dC >= 0 ? '+' : '') + dC.toFixed(0) +
+                    (k === mainIdx ? '' : ' · ' + shift);
 
           var tr = document.createElement('tr');
 
@@ -3130,15 +3229,33 @@
           tr.appendChild(td1);
 
           var td2 = document.createElement('td');
-          td2.textContent = paint ? paint.code : '—';
+          td2.textContent = Math.round(lch.h) + '° ' + hueName(lch.h);
           tr.appendChild(td2);
 
           var td3 = document.createElement('td');
-          td3.textContent = addTxt;
+          td3.textContent = tempName(lch.h);
           tr.appendChild(td3);
+
+          var td4 = document.createElement('td');
+          td4.textContent = Math.round(lch.L) + ' / ' + Math.round(lch.C);
+          tr.appendChild(td4);
+
+          var td5 = document.createElement('td');
+          td5.textContent = rel;
+          tr.appendChild(td5);
 
           tbody.appendChild(tr);
         });
+
+        var thead = document.createElement('thead');
+        var trh = document.createElement('tr');
+        ['角色', '占比', '色相', '色温', 'L / C', '相对主色'].forEach(function (label) {
+          var th = document.createElement('th');
+          th.textContent = label;
+          trh.appendChild(th);
+        });
+        thead.appendChild(trh);
+        table.insertBefore(thead, table.firstChild);
 
         table.appendChild(tbody);
         box.appendChild(table);
