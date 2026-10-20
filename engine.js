@@ -2476,75 +2476,93 @@ var assign = new Array(pts.length).fill(0);
       });
     }
 
-    // 合并相邻且颜色相近的区域：一块身体的明暗过渡不该被切成几十块
-    var mergeTol = opts.mergeTol == null ? 11 : opts.mergeTol;
-    var parent = new Int32Array(regions.length);
-    for (var pi = 0; pi < regions.length; pi++) parent[pi] = pi;
-
-    function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
-    function union(x, y) {
-      var rx = find(x), ry = find(y);
-      if (rx !== ry) parent[ry] = rx;
+    // 激进合并：每次拿"最小的区域"，并进它最相近的邻居，直到没有小区域
+    function regionDist(x, y) {
+      var dx = regions[x].meanL - regions[y].meanL;
+      var dy = regions[x].meanA - regions[y].meanA;
+      var dz = regions[x].meanB - regions[y].meanB;
+      return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    for (var yy = 0; yy < h; yy++) {
-      for (var xx = 0; xx < w; xx++) {
-        var pp = yy * w + xx;
-        var la = labels[pp];
-        if (la < 0) continue;
-
-        if (xx < w - 1) {
-          var lb = labels[pp + 1];
-          if (lb >= 0 && lb !== la) {
-            var ra = regions[la], rb = regions[lb];
-            var d1 = ra.meanL - rb.meanL, d2 = ra.meanA - rb.meanA, d3 = ra.meanB - rb.meanB;
-            if (Math.min(ra.area, rb.area) < minArea * 4 && Math.sqrt(d1 * d1 + d2 * d2 + d3 * d3) < mergeTol) union(la, lb);
+    function buildAdj() {
+      var adj = {};
+      for (var yy = 0; yy < h; yy++) {
+        for (var xx = 0; xx < w; xx++) {
+          var pp = yy * w + xx;
+          var la = labels[pp];
+          if (la < 0) continue;
+          if (xx < w - 1) {
+            var lb = labels[pp + 1];
+            if (lb >= 0 && lb !== la) { (adj[la] = adj[la] || {})[lb] = 1; (adj[lb] = adj[lb] || {})[la] = 1; }
           }
-        }
-        if (yy < h - 1) {
-          var lc = labels[pp + w];
-          if (lc >= 0 && lc !== la) {
-            var rc = regions[la], rd2 = regions[lc];
-            var e1 = rc.meanL - rd2.meanL, e2 = rc.meanA - rd2.meanA, e3 = rc.meanB - rd2.meanB;
-            if (Math.min(rc.area, rd2.area) < minArea * 4 && Math.sqrt(e1 * e1 + e2 * e2 + e3 * e3) < mergeTol) union(la, lc);
+          if (yy < h - 1) {
+            var lc = labels[pp + w];
+            if (lc >= 0 && lc !== la) { (adj[la] = adj[la] || {})[lc] = 1; (adj[lc] = adj[lc] || {})[la] = 1; }
           }
         }
       }
+      return adj;
+    }
+
+    var aggressive = opts.mergeTol == null ? 16 : opts.mergeTol;
+    var smallLimit = opts.smallLimit == null ? minArea * 6 : opts.smallLimit;
+    var guard = 0;
+
+    while (guard++ < 400) {
+      // 找最小的、还没达标的区域
+      var smallest = -1, smallArea = Infinity;
+      for (var ri = 0; ri < regions.length; ri++) {
+        if (regions[ri].area <= 0) continue;
+        if (regions[ri].area < smallLimit && regions[ri].area < smallArea) {
+          smallArea = regions[ri].area;
+          smallest = ri;
+        }
+      }
+      if (smallest < 0) break;
+
+      var adj = buildAdj();
+      var nbrs = adj[smallest] || null;
+      if (!nbrs) { regions[smallest].area = 0; continue; }
+
+      var best = -1, bestD = Infinity;
+      Object.keys(nbrs).forEach(function (k) {
+        var r2 = parseInt(k, 10);
+        if (regions[r2].area <= 0) return;
+        var d = regionDist(smallest, r2);
+        if (d < bestD) { bestD = d; best = r2; }
+      });
+
+      // 阈值放宽，但仍拒绝"颜色差太多"的合并
+      if (best < 0 || bestD > aggressive) { regions[smallest].area *= -1; continue; }
+
+      // 合并：把大的并进来，重标该区域所有像素
+      var keep = regions[best].area >= regions[smallest].area ? best : smallest;
+      var gone = keep === best ? smallest : best;
+      var A = regions[keep].area, B = regions[gone].area;
+      regions[keep].meanL = (regions[keep].meanL * A + regions[gone].meanL * B) / (A + B);
+      regions[keep].meanA = (regions[keep].meanA * A + regions[gone].meanA * B) / (A + B);
+      regions[keep].meanB = (regions[keep].meanB * A + regions[gone].meanB * B) / (A + B);
+      regions[keep].area = A + B;
+      regions[gone].area = 0;
+
+      for (var qi = 0; qi < n; qi++) if (labels[qi] === gone) labels[qi] = keep;
     }
 
     // 重编号
     var relabel = {};
     var next = 0;
-    for (var qi = 0; qi < n; qi++) {
-      var l0 = labels[qi];
-      if (l0 < 0) continue;
-      var root = find(l0);
-      if (relabel[root] == null) relabel[root] = next++;
-      labels[qi] = relabel[root];
-    }
-
-    var merged2 = [];
-    var sums = {};
+    var kept = [];
     for (var rj = 0; rj < regions.length; rj++) {
-      var root2 = find(rj);
-      if (!sums[root2]) sums[root2] = { area: 0, l: 0, a2: 0, b2: 0 };
-      var s2 = sums[root2];
-      s2.area += regions[rj].area;
-      s2.l += regions[rj].meanL * regions[rj].area;
-      s2.a2 += regions[rj].meanA * regions[rj].area;
-      s2.b2 += regions[rj].meanB * regions[rj].area;
+      if (regions[rj].area <= 0) continue;
+      relabel[rj] = next++;
+      kept.push(regions[rj]);
     }
-    Object.keys(sums).forEach(function (k) {
-      var v = sums[k];
-      merged2.push({
-        id: relabel[k],
-        area: v.area,
-        meanL: v.l / v.area,
-        meanA: v.a2 / v.area,
-        meanB: v.b2 / v.area
-      });
-    });
-    regions = merged2;
+    for (var qj = 0; qj < n; qj++) {
+      var l0 = labels[qj];
+      if (l0 >= 0 && relabel[l0] != null) labels[qj] = relabel[l0];
+    }
+    for (var rk = 0; rk < kept.length; rk++) kept[rk].id = relabel[kept[rk].id] != null ? relabel[rk] : rk;
+    regions = kept.map(function (r5, k5) { r5.id = k5; return r5; });
 
     // 太小的块标成 -2，不参与
     var drop = [];
