@@ -2579,6 +2579,9 @@
         var overlay = $('snrOverlay');
         if (!canvas || !overlay) return;
 
+        var orig = $('snrOriginal');
+        if (orig) orig.src = url;
+
         canvas.width = overlay.width = w;
         canvas.height = overlay.height = h;
 
@@ -2635,9 +2638,9 @@
       });
 
       var TINT = {
-        base: 'rgba(90,120,160,0.12)',
-        mid: 'rgba(46,125,79,0.14)',
-        accent: 'rgba(196,140,40,0.20)'
+        base: 'rgba(90,120,160,0.10)',
+        mid: 'rgba(46,125,79,0.11)',
+        accent: 'rgba(196,140,40,0.17)'
       };
 
       var octx = $('snrOverlay').getContext('2d');

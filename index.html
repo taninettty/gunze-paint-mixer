@@ -609,6 +609,16 @@
   .snr-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .snr-klabel { font-size: 12px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
   .snr-empty { font-size: 12px; color: var(--ink-3); padding: 16px; text-align: center; }
+  .snr-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .snr-compare figure { margin: 0; }
+  .snr-compare figcaption { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
+  .snr-compare img, .snr-compare canvas {
+    display: block; width: 100%; height: auto; border-radius: 8px;
+    border: 1px solid var(--line);
+  }
+  .snr-ov { position: relative; }
+  .snr-ov #snrOverlay { position: absolute; inset: 0; border: none; border-radius: 8px; }
+  @media (max-width: 640px) { .snr-compare { grid-template-columns: 1fr; } }
   .snr-stage { position: relative; margin-bottom: 12px; }
   .snr-stage canvas {
     display: block; width: 100%; height: auto; border-radius: 10px;
@@ -1272,8 +1282,17 @@
         </div>
 
         <div class="snr-stage" id="snrStage" hidden>
-          <canvas id="snrCanvas"></canvas>
-          <canvas id="snrOverlay"></canvas>
+          <div class="snr-compare">
+            <figure>
+              <img id="snrOriginal" alt="原图">
+              <figcaption>原图</figcaption>
+            </figure>
+            <figure class="snr-ov">
+              <canvas id="snrCanvas"></canvas>
+              <canvas id="snrOverlay"></canvas>
+              <figcaption>分层</figcaption>
+            </figure>
+          </div>
           <p class="snr-legend"><i class="lg-base"></i>底色层　<i class="lg-signal"></i>主体层　<i class="lg-noise"></i>点缀层</p>
         </div>
 
@@ -1282,7 +1301,7 @@
         <div class="snr-body" id="snrBody" hidden>
           <div class="snr-score">
             <b id="snrRatio">—</b>
-            <span>层</span>
+            <span>分层结果</span>
             <em id="snrEffective"></em>
           </div>
           <p class="snr-verdict" id="snrVerdict"></p>
@@ -1315,7 +1334,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v3.4 · 2026-10</span>
+  <span class="ver" id="appVer">v3.5 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1380,11 +1399,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=3.4"></script>
-  <script src="gunze-data.js?v=3.4"></script>
-  <script src="engine-data.js?v=3.4"></script>
-  <script src="engine-light.js?v=3.4"></script>
-<script src="engine.js?v=3.4"></script>
-<script src="app.js?v=3.4"></script>
+<script src="kb-data.js?v=3.5"></script>
+  <script src="gunze-data.js?v=3.5"></script>
+  <script src="engine-data.js?v=3.5"></script>
+  <script src="engine-light.js?v=3.5"></script>
+<script src="engine.js?v=3.5"></script>
+<script src="app.js?v=3.5"></script>
 </body>
 </html>
