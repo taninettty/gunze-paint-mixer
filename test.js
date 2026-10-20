@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -653,6 +653,11 @@ console.log('\n[34] 导出函数清单');
     wbGain: () => E.wbGain([200, 180, 160]),
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    snrReport: () => E.snrReport([
+      { hex: '#B79764', share: 0.6, lab: [64, 5, 31] },
+      { hex: '#4A3A72', share: 0.25, lab: [30, 10, -20] },
+      { hex: '#E8E4DC', share: 0.15, lab: [91, 0, 0] }
+    ]),
     noiseReport: () => E.noiseReport([
       { hex: '#B79764', share: 0.6, lab: [64, 5, 31] },
       { hex: '#4A3A72', share: 0.3, lab: [30, 10, -20] }
@@ -705,6 +710,25 @@ console.log('\n[35] 信噪比');
   check('明度太近会报警', flat.lines.join('').indexOf('明度拉不开') >= 0, flat.lines.join(' ').slice(0, 30));
 
   check('空输入返回 null', E.noiseReport([]) === null, 'null');
+}
+
+console.log('\n[36] 信噪比数值');
+{
+  var mkc = function (hex, share) { return { hex: hex, share: share, lab: E.labOfHex(hex) }; };
+
+  var wide = E.snrReport([mkc('#B79764', 0.7), mkc('#4A3A72', 0.2), mkc('#C0392B', 0.1)]);
+  check('主色强时比值大', wide.ratio > 2, wide.ratioText);
+  check('信号只有一个（主色）', wide.colors.filter(function (c) { return c.role === 'signal'; }).length === 1,
+    wide.colors.map(function (c) { return c.hex + ':' + c.role; }).join(' '));
+
+  var flat = E.snrReport([mkc('#B79764', 0.3), mkc('#4A3A72', 0.3), mkc('#C0392B', 0.2), mkc('#E8E4DC', 0.2)]);
+  check('四色均分时不算主次清楚', flat.ratio < 2, flat.ratioText);
+
+  var single = E.snrReport([mkc('#B79764', 1)]);
+  check('单色时比值为无穷', single.ratioText === '∞ : 1', single.ratioText);
+
+  check('有效色数 ≤ 颜色数', flat.effectiveColors <= flat.colors.length + 0.001,
+    flat.effectiveColors.toFixed(2) + ' / ' + flat.colors.length);
 }
 
 console.log('\n[22] 性能');

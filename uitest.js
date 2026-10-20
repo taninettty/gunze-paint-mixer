@@ -136,6 +136,16 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message + '
       out.layeredChanged = document.getElementById('layerList').textContent !== before;
     }
 
+    // 信噪比页
+    var snrBtn = document.querySelector('.nav-btn[data-page="snr"]');
+    if (snrBtn) {
+      snrBtn.click();
+      await sleep(350);
+      var snrPanel = document.querySelector('.panel--snr');
+      out.snrShown = snrPanel ? getComputedStyle(snrPanel).display !== 'none' : false;
+      out.snrInputs = document.querySelectorAll('#snrInput, #snrK').length;
+    }
+
     // 三个顶层页：每次只应显示一个
     var PAGE_PANEL = ['.panel--target', '.panel--process', '.panel--kb'];
     var pageReport = [];
@@ -233,6 +243,7 @@ function run() {
   check('换底漆会重算分层反推', r.layeredChanged === true, String(r.layeredChanged));
   check('三个顶层页都能显示', (r.pages || '').indexOf('hidden') < 0 && (r.pages || '').split(' ').length === 3, r.pages);
   check('风格按钮能切换', r.styleChanged === true && r.styleActive === 'art', (r.styleActive || '') + ' · 变化 ' + String(r.styleChanged));
+  check('信噪比页能打开', r.snrShown === true && r.snrInputs === 2, String(r.snrShown) + ' · ' + r.snrInputs + ' 个控件');
   check('每个页签点开都有内容', (r.tabs || '').indexOf('BAD') < 0 && (r.tabs || '').split(' ').length === 4, r.tabs);
   check('照片分析弹窗能打开', r.modalOpened === true, String(r.modalOpened));
 

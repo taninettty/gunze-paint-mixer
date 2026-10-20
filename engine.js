@@ -2173,6 +2173,65 @@ var assign = new Array(pts.length).fill(0);
   /* 光照模块在 engine-light.js：litColor / shadeVariants / tintRecipe */
 
 
+
+  /**
+   * 信噪比：把画面里的颜色分成"信号"和"噪声"。
+   *
+   * 信号 = 占比 ≥ 25% 的颜色（"真正在主导"的那几块）。
+   * 噪声 = 剩下的。
+   * 比值 = 信号占比 / 噪声占比，用 "X : 1" 表示。
+   * 四色均分时信号为 0、比值 0，正说明没有主色。
+   */
+  function snrReport(clusters, opts) {
+    opts = opts || {};
+    if (!clusters || !clusters.length) return null;
+
+    var sorted = clusters.slice().sort(function (a, b) { return b.share - a.share; });
+
+    // 信号 = 最大的那一块；噪声 = 其余全部。
+    // 只看"主色压不压得住"，碎不碎另由有效色数反映。
+    var main = sorted[0];
+    var s = main.share;
+    var n = Math.max(0, 1 - s);
+    var ratio = n <= 1e-6 ? Infinity : s / n;
+
+    var H = 0;
+    sorted.forEach(function (c) {
+      if (c.share > 0) H -= c.share * Math.log2(c.share);
+    });
+
+    var detail = sorted.map(function (c, i) {
+      return {
+        hex: c.hex,
+        share: c.share,
+        lab: c.lab || labOfHex(c.hex),
+        role: i === 0 ? 'signal' : 'noise'
+      };
+    });
+
+    var eff = Math.pow(2, H);
+    var verdict;
+    if (!isFinite(ratio)) verdict = '画面几乎是单一颜色，没有噪声。';
+    else if (ratio >= 2) verdict = '主色压得住：最大一块占 ' + Math.round(s * 100) + '%，其余都在让位。';
+    else if (ratio >= 1) verdict = '主次偏弱：最大一块占 ' + Math.round(s * 100) + '%，还撑得住场面。';
+    else if (ratio >= 0.5) verdict = '偏碎：最大一块只占 ' + Math.round(s * 100) + '%，眼睛找不到重点。';
+    else verdict = '很碎：最大一块只有 ' + Math.round(s * 100) + '%，远看会糊成一片。';
+
+    if (eff > 3.5) verdict += ' 有效色数 ' + eff.toFixed(1) + '，颜色种类偏多。';
+
+    return {
+      signal: s,
+      noise: n,
+      ratio: ratio,
+      ratioText: isFinite(ratio) ? ratio.toFixed(1) + ' : 1' : '∞ : 1',
+      entropy: H,
+      effectiveColors: eff,
+      colors: detail,
+      verdict: verdict
+    };
+  }
+
+
   // ---------------------------------------------------------------
   // 信噪比：画面里"想让人看的"和"全部信息"的比例
   // ---------------------------------------------------------------
@@ -2321,6 +2380,7 @@ var assign = new Array(pts.length).fill(0);
     nearestPaint: nearestPaint,
     estimateLight: LIGHT.estimateLight,
     noiseReport: noiseReport,
+    snrReport: snrReport,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,

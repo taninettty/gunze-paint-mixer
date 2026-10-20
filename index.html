@@ -604,6 +604,30 @@
   }
   .noise-box b { color: var(--ink); }
   .noise-box.warn { background: #FBF0E7; }
+  .panel--snr { grid-column: 1 / -1; max-width: 720px; }
+  .snr-lead { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.7; }
+  .snr-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .snr-klabel { font-size: 12px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
+  .snr-empty { font-size: 12px; color: var(--ink-3); padding: 16px; text-align: center; }
+  .snr-score {
+    display: flex; align-items: baseline; gap: 8px;
+    padding: 14px 16px; border-radius: 10px; background: #F6F2E8; margin-bottom: 10px;
+  }
+  .snr-score b { font-size: 30px; font-weight: 600; letter-spacing: -.02em; }
+  .snr-score span { font-size: 12px; color: var(--ink-3); }
+  .snr-score em { margin-left: auto; font-style: normal; font-size: 11px; color: var(--ink-3); }
+  .snr-verdict { font-size: 12.5px; line-height: 1.7; margin: 0 0 12px; }
+  .snr-colors { list-style: none; margin: 0; padding: 0; }
+  .snr-colors li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+  }
+  .snr-colors .sw { width: 22px; height: 22px; border-radius: 5px; border: 1px solid rgba(0,0,0,.12); }
+  .snr-colors .hx { font-family: ui-monospace, Consolas, monospace; font-size: 11px; color: var(--ink-2); }
+  .snr-colors .sh { margin-left: auto; font-weight: 600; }
+  .snr-colors .tag { font-size: 10.5px; padding: 2px 7px; border-radius: 999px; }
+  .snr-colors .tag.signal { background: #E7F0E8; color: #2F7D4F; }
+  .snr-colors .tag.noise { background: #F2EFE8; color: var(--ink-3); }
   .result-title {
     font-size: 11px; color: var(--ink-3); letter-spacing: .06em;
     padding: 6px 8px 8px;
@@ -1030,6 +1054,7 @@
   <button type="button" class="nav-btn active" data-page="mix">调色</button>
   <button type="button" class="nav-btn" data-page="proc">工序</button>
   <button type="button" class="nav-btn" data-page="kb">喷涂知识</button>
+        <button type="button" class="nav-btn" data-page="snr">信噪比</button>
 </nav>
 
 <div class="guide" id="guide">
@@ -1213,6 +1238,36 @@
 
 
 </div>
+      <section class="panel panel--snr" data-page="snr" hidden>
+        <h2><i class="num">6</i>信噪比检测<span class="hint">这张图的颜色有没有主次</span></h2>
+
+        <p class="snr-lead">
+          贴一张图，统计每种颜色占了多大面积，算出「信号 : 噪声」，并说明哪些颜色是主角、哪些在抢戏。
+        </p>
+
+        <div class="row snr-controls">
+          <input type="file" id="snrInput" accept="image/*">
+          <label class="snr-klabel">拆成
+            <select id="snrK">
+              <option value="4">4 块</option>
+              <option value="6" selected>6 块</option>
+              <option value="8">8 块</option>
+            </select>
+          </label>
+        </div>
+
+        <p class="snr-empty" id="snrEmpty">还没有选图。建议用一张模型正面照，背景越干净越准。</p>
+
+        <div class="snr-body" id="snrBody" hidden>
+          <div class="snr-score">
+            <b id="snrRatio">—</b>
+            <span>信号 : 噪声</span>
+            <em id="snrEffective"></em>
+          </div>
+          <p class="snr-verdict" id="snrVerdict"></p>
+          <ul class="snr-colors" id="snrColors"></ul>
+        </div>
+      </section>
 </main>
 
   <!-- 5 · 喷涂知识 -->
@@ -1239,7 +1294,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v3.1 · 2026-10</span>
+  <span class="ver" id="appVer">v3.2 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1304,11 +1359,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=3.1"></script>
-  <script src="gunze-data.js?v=3.1"></script>
-  <script src="engine-data.js?v=3.1"></script>
-  <script src="engine-light.js?v=3.1"></script>
-<script src="engine.js?v=3.1"></script>
-<script src="app.js?v=3.1"></script>
+<script src="kb-data.js?v=3.2"></script>
+  <script src="gunze-data.js?v=3.2"></script>
+  <script src="engine-data.js?v=3.2"></script>
+  <script src="engine-light.js?v=3.2"></script>
+<script src="engine.js?v=3.2"></script>
+<script src="app.js?v=3.2"></script>
 </body>
 </html>

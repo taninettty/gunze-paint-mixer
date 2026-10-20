@@ -2534,6 +2534,7 @@
     $('downloadBtn').addEventListener('click', downloadRecipe);
 
     bindPhoto();
+    initSnr();
   }
 
   // --------------------------------------------------------------
@@ -2546,6 +2547,108 @@
     Object.keys(map).forEach(function (k) {
       var el = $(map[k]);
       if (el && KB_DATA[k]) el.innerHTML = KB_DATA[k];
+    });
+  }
+
+  // ---------------------------------------------------------------
+  // 信噪比检测页
+  // ---------------------------------------------------------------
+  function initSnr() {
+    var input = $('snrInput');
+    if (!input) return;
+
+    function analyze(file) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+
+      img.onerror = function () {
+        $('snrEmpty').hidden = false;
+        $('snrEmpty').textContent = '这张图打不开，换 JPG / PNG 试试。';
+        $('snrBody').hidden = true;
+      };
+
+      img.onload = function () {
+        var cv = document.createElement('canvas');
+        var scale = Math.min(1, 900 / Math.max(img.width, img.height));
+        cv.width = Math.max(1, Math.round(img.width * scale));
+        cv.height = Math.max(1, Math.round(img.height * scale));
+
+        var ctx = cv.getContext('2d');
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, cv.width, cv.height);
+        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+
+        var data, samples = [];
+        try {
+          data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+        } catch (e) {
+          $('snrEmpty').hidden = false;
+          $('snrEmpty').textContent = '读不出像素，换一张小一点的图。';
+          return;
+        }
+
+        for (var i = 0; i < data.length; i += 4 * 7) {
+          samples.push([data[i], data[i + 1], data[i + 2]]);
+        }
+
+        var k = Number($('snrK').value) || 6;
+        var res = E.analyzeImage(samples, { k: k });
+        var snr = E.snrReport(res.clusters);
+
+        if (!snr) {
+          $('snrEmpty').hidden = false;
+          $('snrEmpty').textContent = '这张图几乎只有一个颜色，没有信噪比可言。';
+          $('snrBody').hidden = true;
+          return;
+        }
+
+        $('snrEmpty').hidden = true;
+        $('snrBody').hidden = false;
+        $('snrRatio').textContent = snr.ratioText;
+        $('snrEffective').textContent = '有效色数 ' + snr.effectiveColors.toFixed(1) + ' 种';
+        $('snrVerdict').textContent = snr.verdict;
+
+        var list = $('snrColors');
+        list.innerHTML = '';
+
+        snr.colors.forEach(function (c) {
+          var li = document.createElement('li');
+
+          var sw = document.createElement('i');
+          sw.className = 'sw';
+          sw.style.background = c.hex;
+
+          var hx = document.createElement('span');
+          hx.className = 'hx';
+          hx.textContent = c.hex;
+
+          var tag = document.createElement('span');
+          tag.className = 'tag ' + c.role;
+          tag.textContent = c.role === 'signal' ? '信号' : '噪声';
+
+          var sh = document.createElement('span');
+          sh.className = 'sh';
+          sh.textContent = Math.round(c.share * 100) + '%';
+
+          li.appendChild(sw);
+          li.appendChild(hx);
+          li.appendChild(tag);
+          li.appendChild(sh);
+          list.appendChild(li);
+        });
+      };
+
+      img.src = url;
+    }
+
+    input.addEventListener('change', function (ev) {
+      var f = ev.target.files && ev.target.files[0];
+      if (f) analyze(f);
+    });
+
+    $('snrK').addEventListener('change', function () {
+      var f = input.files && input.files[0];
+      if (f) analyze(f);
     });
   }
 
