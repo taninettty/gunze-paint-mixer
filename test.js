@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -653,6 +653,10 @@ console.log('\n[34] 导出函数清单');
     wbGain: () => E.wbGain([200, 180, 160]),
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    noiseReport: () => E.noiseReport([
+      { hex: '#B79764', share: 0.6, lab: [64, 5, 31] },
+      { hex: '#4A3A72', share: 0.3, lab: [30, 10, -20] }
+    ]),
     castName: () => E.castName([50, 10, 10]),
     metalName: () => E.metalName([50, 10, 10]),
     toneOf: () => E.toneOf([50, 10, 10]),
@@ -685,6 +689,22 @@ console.log('\n[34] 导出函数清单');
 
   // snapRecipe 依赖完整求解上下文（内部还会读 lines[i].parts 等），只验存在与类型
   check('每个函数都跑得通', broke.length === 0, ran + ' 个（snapRecipe 仅验类型）· ' + (broke.join(', ') || 'ok'));
+}
+
+console.log('\n[35] 信噪比');
+{
+  var mk = function (hex, share) { return { hex: hex, share: share, lab: E.labOfHex(hex) }; };
+
+  var good = E.noiseReport([mk('#B79764', 0.6), mk('#4A3A72', 0.3), mk('#E8E4DC', 0.1)]);
+  check('主次清楚时判 ok', good.level === 'ok' && good.bigBlocks === 2, good.lines.join(' ').slice(0, 30));
+
+  var busy = E.noiseReport([mk('#B79764', 0.24), mk('#C0392B', 0.22), mk('#2E5C9A', 0.2), mk('#8A8A8A', 0.18), mk('#E8E4DC', 0.16)]);
+  check('碎色块会报警', busy.level === 'warn' && busy.bigBlocks === 5, busy.lines[0].slice(0, 24));
+
+  var flat = E.noiseReport([mk('#8A8A8A', 0.7), mk('#9A9A9A', 0.2), mk('#7A7A7A', 0.1)]);
+  check('明度太近会报警', flat.lines.join('').indexOf('明度拉不开') >= 0, flat.lines.join(' ').slice(0, 30));
+
+  check('空输入返回 null', E.noiseReport([]) === null, 'null');
 }
 
 console.log('\n[22] 性能');

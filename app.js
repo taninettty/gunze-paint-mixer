@@ -2076,6 +2076,19 @@
   }
 
   function renderList() {
+    var noise = null;
+    try { noise = E.noiseReport(photo.shown); } catch (e) { noise = null; }
+    var nb = $('noiseBox');
+    if (nb) {
+      if (noise) {
+        nb.hidden = false;
+        nb.className = 'noise-box' + (noise.level === 'warn' ? ' warn' : '');
+        nb.innerHTML = '<b>信噪比</b> · ' + noise.lines.join(' ');
+      } else {
+        nb.hidden = true;
+      }
+    }
+
     var list = $('clusterList');
     list.innerHTML = '';
 

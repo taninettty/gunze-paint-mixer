@@ -2172,6 +2172,78 @@ var assign = new Array(pts.length).fill(0);
    */
   /* 光照模块在 engine-light.js：litColor / shadeVariants / tintRecipe */
 
+
+  // ---------------------------------------------------------------
+  // 信噪比：画面里"想让人看的"和"全部信息"的比例
+  // ---------------------------------------------------------------
+
+  /**
+   * 给一组色块打分：主色够不够压得住、色块是不是太碎、明度拉不拉得开。
+   * 只看照片里抽出来的颜色，不涉及构图。
+   */
+  function noiseReport(clusters) {
+    if (!clusters || !clusters.length) return null;
+
+    var sorted = clusters.slice().sort(function (a, b) { return b.share - a.share; });
+    var dominant = sorted[0].share;
+    var big = sorted.filter(function (c) { return c.share >= 0.15; }).length;
+
+    var lMin = Infinity, lMax = -Infinity;
+    sorted.forEach(function (c) {
+      if (c.lab && c.lab[0] < lMin) lMin = c.lab[0];
+      if (c.lab && c.lab[0] > lMax) lMax = c.lab[0];
+    });
+    var lRange = isFinite(lMin) ? lMax - lMin : 0;
+
+    var hues = {};
+    sorted.forEach(function (c) {
+      if (!c.lab) return;
+      if (Math.hypot(c.lab[1], c.lab[2]) < 8) return;
+      var h = Math.atan2(c.lab[2], c.lab[1]) * 180 / Math.PI;
+      if (h < 0) h += 360;
+      hues[Math.floor(h / 45)] = true;
+    });
+    var hueCount = Object.keys(hues).length;
+
+    var lines = [];
+    var level = 'ok';
+
+    if (dominant < 0.45) {
+      level = 'warn';
+      lines.push('没有主色：最大的一块只占 ' + Math.round(dominant * 100) + '%，画面缺主次。');
+    }
+
+    if (big >= 4) {
+      level = 'warn';
+      lines.push('色块太碎：' + big + ' 块都超过 15%，焦点会被稀释。');
+    }
+
+    if (lRange < 25) {
+      level = 'warn';
+      lines.push('明度拉不开：最亮和最暗只差 ' + Math.round(lRange) + '，远看会糊成一片。');
+    } else if (lRange > 70 && big >= 4) {
+      lines.push('对比很强但信息多：让一个区域当主角，其余压下去。');
+    }
+
+    if (hueCount >= 5) {
+      lines.push('用色 ' + hueCount + ' 个色系，颜色之间容易打架，建议收一收。');
+    }
+
+    if (!lines.length) {
+      lines.push('主次清楚：主色 ' + Math.round(dominant * 100) + '%，明度差 ' +
+        Math.round(lRange) + '，' + big + ' 个主要色块。');
+    }
+
+    return {
+      dominant: dominant,
+      bigBlocks: big,
+      lRange: lRange,
+      hueCount: hueCount,
+      level: level,
+      lines: lines
+    };
+  }
+
   /** 用一个词说清这个颜色的色调偏向（彩度太低就不说） */
   function castName(lab) {
     var c = Math.hypot(lab[1], lab[2]);
@@ -2248,6 +2320,7 @@ var assign = new Array(pts.length).fill(0);
     solve: solve,
     nearestPaint: nearestPaint,
     estimateLight: LIGHT.estimateLight,
+    noiseReport: noiseReport,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,
