@@ -577,6 +577,27 @@
     renderShades();
   }
 
+  function hslToRgb(h, s, l) {
+    var r, g, b;
+    if (s === 0) { r = g = b = l; }
+    else {
+      function hue2rgb(p2, q2, t) {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p2 + (q2 - p2) * 6 * t;
+        if (t < 1 / 2) return q2;
+        if (t < 2 / 3) return p2 + (q2 - p2) * (2 / 3 - t) * 6;
+        return p2;
+      }
+      var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      var p2 = 2 * l - q;
+      r = hue2rgb(p2, q, h + 1 / 3);
+      g = hue2rgb(p2, q, h);
+      b = hue2rgb(p2, q, h - 1 / 3);
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+  }
+
   function setLight(light) {
     if (light !== 'warm' && light !== 'neutral' && light !== 'cool') return;
     state.light = light;
@@ -2618,32 +2639,38 @@
 
       var k = Number($('snrK').value) || 6;
 
-      // 卷积信噪比：低频=结构，高频=细节
+      // 两步卷积：先找边界分区，再在区域内部算均匀度
       var w = last.w, h = last.h;
       var luma = new Float32Array(w * h);
       for (var li = 0; li < w * h; li++) {
         var lp = li * 4;
         luma[li] = (last.data[lp] * 0.299 + last.data[lp + 1] * 0.587 + last.data[lp + 2] * 0.114) / 255;
       }
-      var fs2 = E.freqSnr(luma, w, h, { radius: 4, tile: 16 });
 
-      // 逐块涂色：结构强=绿，细节强=红
+      var seg = E.segmentRegions(luma, w, h, { minArea: Math.max(60, Math.round(w * h / 300)) });
+      var rs = E.regionSnr(luma, w, h, seg, { radius: 3 });
+
+      // 每个区域一个颜色，边界画深
       var octx = $('snrOverlay').getContext('2d');
       octx.clearRect(0, 0, w, h);
 
-      var T = fs2.tile;
-      for (var ty = 0; ty < fs2.rows; ty++) {
-        for (var tx = 0; tx < fs2.cols; tx++) {
-          var v = fs2.map[ty * fs2.cols + tx];
-          // 0.5 → 黄；越大越绿（结构），越小越红（细节）
-          var t = Math.max(0, Math.min(1, (Math.log10(Math.max(0.05, v)) + 1.3) / 2.3));
-          var rr = Math.round(200 - 154 * t);
-          var gg = Math.round(70 + 90 * t);
-          var bb = Math.round(60 + 10 * t);
-          octx.fillStyle = 'rgba(' + rr + ',' + gg + ',' + bb + ',0.34)';
-          octx.fillRect(tx * T, ty * T, T, T);
-        }
+      function regionColor(id) {
+        var hue = (id * 137.508) % 360;
+        return 'hsla(' + hue.toFixed(0) + ',55%,58%,0.30)';
       }
+
+      var img = octx.createImageData(w, h);
+      var d = img.data;
+      for (var pi = 0; pi < w * h; pi++) {
+        var lab = seg.labels[pi];
+        var o = pi * 4;
+        if (seg.isEdge[pi]) { d[o] = 40; d[o + 1] = 38; d[o + 2] = 34; d[o + 3] = 110; continue; }
+        if (lab < 0) { d[o + 3] = 0; continue; }
+        var hue = (lab * 137.508) % 360;
+        var rgb = hslToRgb(hue / 360, 0.55, 0.58);
+        d[o] = rgb[0]; d[o + 1] = rgb[1]; d[o + 2] = rgb[2]; d[o + 3] = 80;
+      }
+      octx.putImageData(img, 0, 0);
 
       // 颜色分层（参考）
       var res = E.analyzeImage(last.samples, { k: k });
@@ -2654,15 +2681,17 @@
       $('snrStage').hidden = false;
       $('snrBody').hidden = false;
 
-      $('snrRatio').textContent = fs2.db.toFixed(0) + ' dB';
-      $('snrEffective').textContent = '结构 : 细节 = ' +
-        (fs2.ratio >= 100 ? Math.round(fs2.ratio) : fs2.ratio.toFixed(1)) + ' : 1';
+      $('snrRatio').textContent = rs.regionCount + ' 区';
+      $('snrEffective').textContent = '区域间 : 区域内 = ' +
+        (rs.ratio >= 100 ? Math.round(rs.ratio) : rs.ratio.toFixed(1)) + ' : 1 · ' + rs.db.toFixed(0) + ' dB';
 
-      var verdict = fs2.db >= 18
-        ? '结构为主：画面靠形体和大色块支撑，细节不抢戏。'
-        : fs2.db >= 8
-          ? '结构与细节相当：有体积也有信息，注意别让细节铺满。'
-          : '细节压过结构：碎边和纹理太多，退后两步会糊成一片。';
+      var verdict;
+      if (rs.regionCount <= 1) verdict = '整张图几乎是一整块，没有可分的区域。';
+      else if (rs.db >= 20) verdict = '分区干净：区域之间拉得开，区域内部也匀。';
+      else if (rs.db >= 10) verdict = '分区可见：能分出 ' + rs.regionCount + ' 块，内部略有杂色。';
+      else if (rs.db >= 0) verdict = '分区偏弱：块分得出来，但内部不匀，细节在抢戏。';
+      else verdict = '几乎没有分区：边界和内部噪声混在一起。';
+
       $('snrVerdict').textContent = verdict + '（颜色分层：' + rep.activeCount + ' 层，' +
         rep.verdict.replace(/^[^：]*：/, '') + '）';
 

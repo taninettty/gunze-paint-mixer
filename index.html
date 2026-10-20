@@ -1265,10 +1265,10 @@
 
 </div>
       <section class="panel panel--snr" data-page="snr" hidden>
-        <h2><i class="num">6</i>信噪比检测<span class="hint">颜色分了几层，层次立不立得住</span></h2>
+        <h2><i class="num">6</i>信噪比检测<span class="hint">先分区，再看每块内部匀不匀</span></h2>
 
         <p class="snr-lead">
-          贴一张图，把颜色按面积分成「底色层 / 主体层 / 点缀层」，看相邻两层拉不拉得开。
+          先卷积找边界把图切成区域，再在每块区域内部算均匀度：区域之间差得开、区域内部又匀，才算干净。
         </p>
 
         <div class="row snr-controls">
@@ -1336,7 +1336,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v3.7 · 2026-10</span>
+  <span class="ver" id="appVer">v3.8 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1401,11 +1401,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=3.7"></script>
-  <script src="gunze-data.js?v=3.7"></script>
-  <script src="engine-data.js?v=3.7"></script>
-  <script src="engine-light.js?v=3.7"></script>
-<script src="engine.js?v=3.7"></script>
-<script src="app.js?v=3.7"></script>
+<script src="kb-data.js?v=3.8"></script>
+  <script src="gunze-data.js?v=3.8"></script>
+  <script src="engine-data.js?v=3.8"></script>
+  <script src="engine-light.js?v=3.8"></script>
+<script src="engine.js?v=3.8"></script>
+<script src="app.js?v=3.8"></script>
 </body>
 </html>

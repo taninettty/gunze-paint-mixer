@@ -2195,6 +2195,193 @@ var assign = new Array(pts.length).fill(0);
   }
 
   // ---------------------------------------------------------------
+  // 分区信噪比：先卷积找边界分区，再在区域内部卷积
+  // ---------------------------------------------------------------
+
+  /** Sobel 梯度幅值（3×3 卷积） */
+  function sobelMagnitude(luma, w, h) {
+    var mag = new Float32Array(w * h);
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        var i = y * w + x;
+        var tl = luma[i - w - 1], tc = luma[i - w], tr = luma[i - w + 1];
+        var ml = luma[i - 1], mr = luma[i + 1];
+        var bl = luma[i + w - 1], bc = luma[i + w], br = luma[i + w + 1];
+        var gx = (tr + 2 * mr + br) - (tl + 2 * ml + bl);
+        var gy = (bl + 2 * bc + br) - (tl + 2 * tc + tr);
+        mag[i] = Math.sqrt(gx * gx + gy * gy);
+      }
+    }
+    return mag;
+  }
+
+  /** Otsu 阈值：让前景/背景的类间方差最大 */
+  function otsuThreshold(values, bins) {
+    bins = bins || 64;
+    var hist = new Float64Array(bins);
+    var max = 0, i;
+    for (i = 0; i < values.length; i++) if (values[i] > max) max = values[i];
+    if (max <= 0) return 0;
+
+    for (i = 0; i < values.length; i++) {
+      var b = Math.min(bins - 1, Math.floor((values[i] / max) * bins));
+      hist[b]++;
+    }
+
+    var total = values.length;
+    var sumAll = 0;
+    for (i = 0; i < bins; i++) sumAll += i * hist[i];
+
+    var sumB = 0, wB = 0, best = 0, bestVar = -1;
+    for (i = 0; i < bins; i++) {
+      wB += hist[i];
+      if (wB === 0) continue;
+      var wF = total - wB;
+      if (wF === 0) break;
+      sumB += i * hist[i];
+      var mB = sumB / wB;
+      var mF = (sumAll - sumB) / wF;
+      var between = wB * wF * (mB - mF) * (mB - mF);
+      if (between > bestVar) { bestVar = between; best = i; }
+    }
+    return ((best + 1) / bins) * max;
+  }
+
+  /** 3×3 膨胀一次，把断开的边界连起来 */
+  function dilate(mask, w, h) {
+    var out = new Uint8Array(mask.length);
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        var i = y * w + x;
+        if (mask[i]) { out[i] = 1; continue; }
+        if (mask[i - 1] || mask[i + 1] || mask[i - w] || mask[i + w]) out[i] = 1;
+      }
+    }
+    // 边缘一圈保持原样
+    for (var x2 = 0; x2 < w; x2++) { out[x2] = mask[x2]; out[(h - 1) * w + x2] = mask[(h - 1) * w + x2]; }
+    for (var y2 = 0; y2 < h; y2++) { out[y2 * w] = mask[y2 * w]; out[y2 * w + w - 1] = mask[y2 * w + w - 1]; }
+    return out;
+  }
+
+  /** 连通域标记（边界像元不参与） */
+  function segmentRegions(luma, w, h, opts) {
+    opts = opts || {};
+    var minArea = opts.minArea == null ? Math.max(60, Math.round(w * h / 300)) : opts.minArea;
+
+    var mag = sobelMagnitude(luma, w, h);
+    var th = opts.threshold != null ? opts.threshold : otsuThreshold(mag, 64);
+
+    var isEdge = new Uint8Array(w * h);
+    for (var i = 0; i < mag.length; i++) isEdge[i] = mag[i] > th ? 1 : 0;
+    isEdge = dilate(isEdge, w, h);
+
+    // 外面一圈也算边界，不然区域会绕过上下边缘连在一起
+    for (var bx = 0; bx < w; bx++) { isEdge[bx] = 1; isEdge[(h - 1) * w + bx] = 1; }
+    for (var by = 0; by < h; by++) { isEdge[by * w] = 1; isEdge[by * w + w - 1] = 1; }
+
+    var labels = new Int32Array(w * h).fill(-1);
+    var stack = new Int32Array(w * h);
+    var regions = [];
+
+    for (var p = 0; p < w * h; p++) {
+      if (labels[p] >= 0 || isEdge[p]) continue;
+      var id = regions.length;
+      var sp = 0;
+      stack[sp++] = p;
+      labels[p] = id;
+
+      var area = 0, sL = 0;
+      while (sp > 0) {
+        var q = stack[--sp];
+        var qx = q % w, qy = (q - qx) / w;
+        area++;
+        sL += luma[q];
+        if (qx > 0 && labels[q - 1] < 0 && !isEdge[q - 1]) { labels[q - 1] = id; stack[sp++] = q - 1; }
+        if (qx < w - 1 && labels[q + 1] < 0 && !isEdge[q + 1]) { labels[q + 1] = id; stack[sp++] = q + 1; }
+        if (qy > 0 && labels[q - w] < 0 && !isEdge[q - w]) { labels[q - w] = id; stack[sp++] = q - w; }
+        if (qy < h - 1 && labels[q + w] < 0 && !isEdge[q + w]) { labels[q + w] = id; stack[sp++] = q + w; }
+      }
+      regions.push({ id: id, area: area, meanL: sL / area });
+    }
+
+    var kept = regions.filter(function (r) { return r.area >= minArea; });
+    var tiny = regions.filter(function (r) { return r.area < minArea; });
+    var tinyArea = tiny.reduce(function (t, r) { return t + r.area; }, 0);
+
+    // 小区域不参与统计，标成 -2
+    var drop = {};
+    tiny.forEach(function (r) { drop[r.id] = true; });
+    for (var k = 0; k < labels.length; k++) if (drop[labels[k]]) labels[k] = -2;
+
+    return {
+      w: w, h: h,
+      labels: labels,
+      isEdge: isEdge,
+      edgeMag: mag,
+      threshold: th,
+      regions: kept.map(function (r, i) { return { id: r.id, area: r.area, meanL: r.meanL, order: i }; }),
+      totalRegions: regions.length,
+      tinyArea: tinyArea
+    };
+  }
+
+  /**
+   * 区域内部再卷积：这块面板喷得匀不匀。
+   *
+   *   区域内高频 = 噪声（颗粒、脏边）
+   *   区域之间的亮度差 = 信号（分色清不清楚）
+   */
+  function regionSnr(luma, w, h, seg, opts) {
+    opts = opts || {};
+    var r = opts.radius == null ? 3 : opts.radius;
+    var low = boxBlur(luma, w, h, r);
+
+    var stats = seg.regions.map(function (reg) {
+      var sLow = 0, sHigh = 0, n = 0;
+      for (var y = 0; y < h; y++) {
+        for (var x = 0; x < w; x++) {
+          var idx = y * w + x;
+          if (seg.labels[idx] !== reg.id) continue;
+          var dh = luma[idx] - low[idx];
+          var dl = low[idx] - reg.meanL;
+          sHigh += dh * dh;
+          sLow += dl * dl;
+          n++;
+        }
+      }
+      return {
+        id: reg.id, area: reg.area, meanL: reg.meanL,
+        highVar: n ? sHigh / n : 0,
+        lowVar: n ? sLow / n : 0
+      };
+    });
+
+    var signal = 0;
+    if (stats.length > 1) {
+      var mL = stats.reduce(function (t, s) { return t + s.meanL * s.area; }, 0) / (w * h);
+      stats.forEach(function (s) { signal += s.area * (s.meanL - mL) * (s.meanL - mL); });
+      signal /= w * h;
+    }
+
+    var noise = 0;
+    stats.forEach(function (s) { noise += s.area * s.highVar; });
+    noise /= w * h;
+
+    var ratio = noise > 1e-9 ? signal / noise : (signal > 0 ? Infinity : 0);
+    var db = 10 * Math.log10(Math.max(1e-6, ratio));
+
+    return {
+      regions: stats,
+      regionCount: stats.length,
+      signal: signal,
+      noise: noise,
+      ratio: ratio,
+      db: db,
+      tinyShare: (seg.tinyArea || 0) / (w * h)
+    };
+  }
+
+  // ---------------------------------------------------------------
   // 卷积信噪比：低频是结构，高频是细节/噪声
   // ---------------------------------------------------------------
 
@@ -2599,6 +2786,8 @@ var assign = new Array(pts.length).fill(0);
     layerReport: layerReport,
     mergeSimilar: mergeSimilar,
     freqSnr: freqSnr,
+    segmentRegions: segmentRegions,
+    regionSnr: regionSnr,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,
