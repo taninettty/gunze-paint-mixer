@@ -2762,6 +2762,48 @@
       else verdict = '对比主要在细节上：刻线、水贴、颗粒占了上风，退后两步会糊成一片。';
       $('snrVerdict').textContent = verdict;
 
+      // 建议栏：把数字翻译成动作
+      var tips = [];
+      if (activeColors >= 6) {
+        tips.push(['颜色偏多（' + activeColors + ' 种）', '把次要面的颜色归到主色，只保留一处点缀。']);
+      }
+      var accentShare2 = (rep.layers.filter(function (L) { return L.name === '点缀层'; })[0] || {}).share || 0;
+      if (accentShare2 > 0.2) {
+        tips.push(['点缀占 ' + Math.round(accentShare2 * 100) + '%', '降到 10–20%，否则它已经不是点缀而是第二主色。']);
+      }
+      if (lRange < 30) {
+        tips.push(['明度差只有 ' + Math.round(lRange), '加深阴影或提亮高光，让远看也有块面对比。']);
+      }
+      if (bs.share < 0.6) {
+        tips.push(['结构占比 ' + Math.round(bs.share * 100) + '%', '细节在抢戏：减少水贴/刻线密度，或把背景压暗压糊。']);
+      }
+      var bgLayer3 = rep.layers.filter(function (L) { return L.name === '背景层'; })[0];
+      if (bgLayer3 && bgLayer3.share > 0.55) {
+        tips.push(['背景占 ' + Math.round(bgLayer3.share * 100) + '%', '模型在画面里偏小，靠近一点拍或裁掉一圈。']);
+      }
+      var mainShare = (rep.layers.filter(function (L) { return L.name === '主色层'; })[0] || {}).share || 0;
+      if (mainShare && mainShare < 0.4) {
+        tips.push(['主色只占 ' + Math.round(mainShare * 100) + '%', '主色撑不起画面，扩大它的面积或减少其它颜色。']);
+      }
+      if (!tips.length) {
+        tips.push(['各项都在参考区间内', '按现在的思路做即可，注意别再加信息。']);
+      }
+
+      var advBox = $('snrAdvice');
+      var advList = $('snrAdviceList');
+      if (advBox && advList) {
+        advBox.hidden = false;
+        advList.innerHTML = '';
+        tips.forEach(function (t) {
+          var li = document.createElement('li');
+          var b = document.createElement('b');
+          b.textContent = t[0];
+          li.appendChild(b);
+          li.appendChild(document.createTextNode(t[1]));
+          advList.appendChild(li);
+        });
+      }
+
       var list = $('snrColors');
       list.innerHTML = '';
 

@@ -604,7 +604,22 @@
   }
   .noise-box b { color: var(--ink); }
   .noise-box.warn { background: #FBF0E7; }
-  .panel--snr { grid-column: 1 / -1; max-width: 720px; }
+  .panel--snr { grid-column: 1 / -1; max-width: 1040px; display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 14px 18px; }
+  .panel--snr > h2, .panel--snr > .snr-lead { grid-column: 1 / -1; }
+  .panel--snr > .snr-controls, .panel--snr > .snr-empty,
+  .panel--snr > .snr-stage, .panel--snr > .snr-body { grid-column: 1; }
+  .panel--snr > .snr-advice { grid-column: 2; grid-row: 3 / span 4; align-self: start; }
+  @media (max-width: 900px) {
+    .panel--snr { grid-template-columns: 1fr; }
+    .panel--snr > .snr-advice { grid-column: 1; grid-row: auto; }
+  }
+  .snr-advice { background: #FBF7EE; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .snr-advice h4 { font-size: 12px; margin: 0 0 8px; color: var(--ink); }
+  .snr-advice ul { list-style: none; margin: 0; padding: 0; }
+  .snr-advice li { font-size: 11.5px; line-height: 1.65; padding: 6px 0; border-bottom: 1px dashed var(--line); color: var(--ink-2); }
+  .snr-advice li:last-child { border-bottom: none; }
+  .snr-advice li b { color: var(--ink); display: block; margin-bottom: 2px; }
+  .snr-ref { font-size: 10.5px; color: var(--ink-3); margin: 10px 0 0; line-height: 1.6; padding-top: 8px; border-top: 1px solid var(--line); }
   .snr-lead { font-size: 12.5px; color: var(--ink-2); margin: 0 0 12px; line-height: 1.7; }
   .snr-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .snr-klabel { font-size: 12px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
@@ -1316,7 +1331,13 @@
           <p class="snr-verdict" id="snrVerdict"></p>
           <ul class="snr-colors" id="snrColors"></ul>
         </div>
-      </section>
+      
+        <aside class="snr-advice" id="snrAdvice" hidden>
+          <h4>建议</h4>
+          <ul id="snrAdviceList"></ul>
+          <p class="snr-ref">参考：颜色 ≤ 5 种、点缀 10–20%、明度差 ≥ 30、结构占比 ≥ 60%</p>
+        </aside>
+</section>
 </main>
 
   <!-- 5 · 喷涂知识 -->
@@ -1343,7 +1364,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v4.4 · 2026-10</span>
+  <span class="ver" id="appVer">v4.5 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1408,11 +1429,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=4.4"></script>
-  <script src="gunze-data.js?v=4.4"></script>
-  <script src="engine-data.js?v=4.4"></script>
-  <script src="engine-light.js?v=4.4"></script>
-<script src="engine.js?v=4.4"></script>
-<script src="app.js?v=4.4"></script>
+<script src="kb-data.js?v=4.5"></script>
+  <script src="gunze-data.js?v=4.5"></script>
+  <script src="engine-data.js?v=4.5"></script>
+  <script src="engine-light.js?v=4.5"></script>
+<script src="engine.js?v=4.5"></script>
+<script src="app.js?v=4.5"></script>
 </body>
 </html>
