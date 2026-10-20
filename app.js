@@ -2650,6 +2650,20 @@
       var edgeW = Number(($('snrEdge') || {}).value) || 0.5;
       var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2, edgeWeight: edgeW });
 
+      // 平涂/渲染图检测：大部分像素几乎没有梯度
+      var flatCount = 0, flatTotal = 0;
+      for (var fy = 0; fy < h; fy += 7) {
+        for (var fx = 0; fx < w; fx += 7) {
+          var fv = luma[fy * w + fx];
+          var gx2 = Math.abs(luma[fy * w + Math.min(w - 1, fx + 1)] - fv);
+          var gy2 = Math.abs(luma[Math.min(h - 1, fy + 1) * w + fx] - fv);
+          flatTotal++;
+          if (gx2 + gy2 < 0.01) flatCount++;
+        }
+      }
+      var flatShare = flatTotal ? flatCount / flatTotal : 0;
+      var isFlatArt = flatShare > 0.45;
+
       // 三个有出处的量（见页面下方标注）
       var rgbFlat = [];
       for (var ri = 0; ri < w * h; ri += 5) {
@@ -2849,7 +2863,7 @@
       }
 
       // ---------- 颜色 ----------
-      if (cEnt > 5.2) {
+      if (!isFlatArt && cEnt > 5.2) {
         addIssue((cEnt - 5.2) * 2, '颜色失控',
           '颜色熵 ' + cEnt.toFixed(1) + ' bit，超过照片常见上限 5.2。每多一种色，注意力就分走一份。',
           ['砍到 3 种：主色 + 一个辅色 + 一处点缀',
@@ -2858,7 +2872,7 @@
           '别用"加一个对比色"来救。颜色已经多了，再加只会更散。');
       }
 
-      if (cEnt < 3.0) {
+      if (!isFlatArt && cEnt < 3.0) {
         addIssue((3.0 - cEnt) * 1.5, '颜色太单调',
           '颜色熵只有 ' + cEnt.toFixed(1) + ' bit，形体和颜色都是同一路，远看没有层次。',
           ['加一种低饱和的对比色，面积控制在 8% 以内',
@@ -2887,13 +2901,16 @@
           '别再加刻线或分色。现在缺的是留白，不是细节。');
       }
 
-      if (bs.share > 0.95 && cEnt < 4.0) {
-        addIssue(1.2, '画面太素',
-          '结构 ' + Math.round(bs.share * 100) + '%、颜色熵 ' + cEnt.toFixed(1) + ' bit，形体和颜色都平。',
-          ['在一个次要面加一处对比（低饱和，面积 5%）',
-           '加一道金属边或分色线，制造一条视线',
-           '靠光泽差做层次：同一色，一块光泽一块消光'],
-          '别整件加深或整件提亮——那只会让平的地方更平。');
+
+
+      // 平涂/渲染图：照片基准不适用，改看形体
+      if (isFlatArt && issues.length === 0) {
+        addIssue(0.8, '平涂图，别看颜色熵',
+          '这张有 ' + Math.round(flatShare * 100) + '% 的像素几乎没有渐变，属于平涂或渲染图。颜色熵和鲜艳度按照片标定，在这里不作数。',
+          ['看暗部占比：低于 18% 就加背光面和投影',
+           '看明度差：低于 30 就重新分配明暗',
+           '看背景占比：超过 45% 就裁图或重拍'],
+          '别照着照片的熵值去加颜色。平涂加颜色只会花，不会立体。');
       }
 
       // 排优先级，只留三条
