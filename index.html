@@ -609,6 +609,19 @@
   .snr-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .snr-klabel { font-size: 12px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; }
   .snr-empty { font-size: 12px; color: var(--ink-3); padding: 16px; text-align: center; }
+  .snr-stage { position: relative; margin-bottom: 12px; }
+  .snr-stage canvas {
+    display: block; width: 100%; height: auto; border-radius: 10px;
+    border: 1px solid var(--line);
+  }
+  .snr-stage #snrOverlay { position: absolute; inset: 0; border: none; }
+  .snr-legend {
+    margin: 6px 0 0; font-size: 11px; color: var(--ink-3);
+    display: flex; align-items: center; gap: 4px;
+  }
+  .snr-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .snr-legend .lg-signal { background: rgba(46,125,79,.5); }
+  .snr-legend .lg-noise { background: rgba(176,58,46,.4); margin-left: 10px; }
   .snr-score {
     display: flex; align-items: baseline; gap: 8px;
     padding: 14px 16px; border-radius: 10px; background: #F6F2E8; margin-bottom: 10px;
@@ -1254,6 +1267,13 @@
               <option value="8">8 块</option>
             </select>
           </label>
+          <label class="snr-klabel"><input type="checkbox" id="snrBg" checked> 忽略浅色背景</label>
+        </div>
+
+        <div class="snr-stage" id="snrStage" hidden>
+          <canvas id="snrCanvas"></canvas>
+          <canvas id="snrOverlay"></canvas>
+          <p class="snr-legend"><i class="lg-signal"></i>主色区域（信号）　<i class="lg-noise"></i>噪声区域</p>
         </div>
 
         <p class="snr-empty" id="snrEmpty">还没有选图。建议用一张模型正面照，背景越干净越准。</p>
@@ -1294,7 +1314,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v3.2 · 2026-10</span>
+  <span class="ver" id="appVer">v3.3 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1359,11 +1379,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=3.2"></script>
-  <script src="gunze-data.js?v=3.2"></script>
-  <script src="engine-data.js?v=3.2"></script>
-  <script src="engine-light.js?v=3.2"></script>
-<script src="engine.js?v=3.2"></script>
-<script src="app.js?v=3.2"></script>
+<script src="kb-data.js?v=3.3"></script>
+  <script src="gunze-data.js?v=3.3"></script>
+  <script src="engine-data.js?v=3.3"></script>
+  <script src="engine-light.js?v=3.3"></script>
+<script src="engine.js?v=3.3"></script>
+<script src="app.js?v=3.3"></script>
 </body>
 </html>

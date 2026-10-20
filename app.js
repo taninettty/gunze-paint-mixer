@@ -2557,6 +2557,8 @@
     var input = $('snrInput');
     if (!input) return;
 
+    var STRIDE = 7;   // 采样步长（像素）
+
     function analyze(file) {
       var url = URL.createObjectURL(file);
       var img = new Image();
@@ -2568,32 +2570,54 @@
       };
 
       img.onload = function () {
-        var cv = document.createElement('canvas');
         var scale = Math.min(1, 900 / Math.max(img.width, img.height));
-        cv.width = Math.max(1, Math.round(img.width * scale));
-        cv.height = Math.max(1, Math.round(img.height * scale));
+        var w = Math.max(1, Math.round(img.width * scale));
+        var h = Math.max(1, Math.round(img.height * scale));
 
-        var ctx = cv.getContext('2d');
+        var canvas = $('snrCanvas');
+        var overlay = $('snrOverlay');
+        if (!canvas || !overlay) return;
+
+        canvas.width = overlay.width = w;
+        canvas.height = overlay.height = h;
+
+        var ctx = canvas.getContext('2d');
         ctx.fillStyle = '#fff';
-        ctx.fillRect(0, 0, cv.width, cv.height);
-        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
 
-        var data, samples = [];
+        var data;
         try {
-          data = ctx.getImageData(0, 0, cv.width, cv.height).data;
+          data = ctx.getImageData(0, 0, w, h).data;
         } catch (e) {
           $('snrEmpty').hidden = false;
           $('snrEmpty').textContent = '读不出像素，换一张小一点的图。';
           return;
         }
 
-        for (var i = 0; i < data.length; i += 4 * 7) {
-          samples.push([data[i], data[i + 1], data[i + 2]]);
+        // 采样 + 记下每个样本落在哪个像素上，后面要按位置画图
+        var samples = [], positions = [];
+        for (var i = 0; i < w * h; i += STRIDE) {
+          var p4 = i * 4;
+          samples.push([data[p4], data[p4 + 1], data[p4 + 2]]);
+          positions.push(i);
         }
 
         var k = Number($('snrK').value) || 6;
         var res = E.analyzeImage(samples, { k: k });
-        var snr = E.snrReport(res.clusters);
+
+        // 浅色背景常常面积最大，会把"主色"抢走，默认剔掉接近白/灰的色块。
+        // 注意：这招只对白底/灰底有效，花背景需要手动排除（TODO）。
+        var dropBg = $('snrBg') && $('snrBg').checked;
+        var clusters = res.clusters.filter(function (c) {
+          if (!dropBg) return true;
+          var lab = c.lab || E.labOfHex(c.hex);
+          return !(lab[0] > 88 && Math.hypot(lab[1], lab[2]) < 6);
+        });
+
+        if (!clusters.length) clusters = res.clusters;
+
+        var snr = E.snrReport(clusters);
 
         if (!snr) {
           $('snrEmpty').hidden = false;
@@ -2602,7 +2626,32 @@
           return;
         }
 
+        // 每个样本归到最近的色块，再决定它是信号还是噪声
+        var centers = snr.colors.map(function (c) {
+          return { rgb: E.hexToRgb(c.hex), hex: c.hex, signal: false };
+        });
+        var mainHex = snr.colors[0].hex;
+        centers.forEach(function (c) { c.signal = c.hex === mainHex; });
+
+        var octx = overlay.getContext('2d');
+        octx.clearRect(0, 0, w, h);
+
+        for (var j = 0; j < samples.length; j++) {
+          var s = samples[j], best = 0, bd = Infinity;
+          for (var m = 0; m < centers.length; m++) {
+            var cr = centers[m].rgb;
+            var d = (s[0] - cr.r) * (s[0] - cr.r) + (s[1] - cr.g) * (s[1] - cr.g) + (s[2] - cr.b) * (s[2] - cr.b);
+            if (d < bd) { bd = d; best = m; }
+          }
+
+          var px = positions[j] % w;
+          var py = Math.floor(positions[j] / w);
+          octx.fillStyle = centers[best].signal ? 'rgba(46,125,79,0.20)' : 'rgba(176,58,46,0.10)';
+          octx.fillRect(px, py, STRIDE, STRIDE);
+        }
+
         $('snrEmpty').hidden = true;
+        $('snrStage').hidden = false;
         $('snrBody').hidden = false;
         $('snrRatio').textContent = snr.ratioText;
         $('snrEffective').textContent = '有效色数 ' + snr.effectiveColors.toFixed(1) + ' 种';
@@ -2643,6 +2692,11 @@
 
     input.addEventListener('change', function (ev) {
       var f = ev.target.files && ev.target.files[0];
+      if (f) analyze(f);
+    });
+
+    if ($('snrBg')) $('snrBg').addEventListener('change', function () {
+      var f = input.files && input.files[0];
       if (f) analyze(f);
     });
 
