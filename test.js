@@ -521,6 +521,40 @@ check('C9 金属金 → 黄金/香槟', /金/.test(E.metalName(E.labOfHex(c9.hex
   check('六张卡两两可分 ' + hex, v.length === 6 && minDe >= 3, '最小 ΔE ' + minDe.toFixed(1));
 });
 
+console.log('\n[30] 光照决定阴影方向');
+{
+  var b2 = '#B79764';
+  var shadeWarm = E.shadeVariants(b2, { light: 'warm' });
+  var shadeCool = E.shadeVariants(b2, { light: 'cool' });
+  var pickLight = function (arr, id) { return arr.filter(function (x) { return x.id === id; })[0]; };
+
+  var dHiLight = E.deltaE00(pickLight(shadeWarm, 'hi').lab, pickLight(shadeCool, 'hi').lab);
+  check('暖光与冷光的高光不同', dHiLight > 3, 'ΔE ' + dHiLight.toFixed(1));
+
+  var dShLight = E.deltaE00(pickLight(shadeWarm, 'sh-warm').lab, pickLight(shadeCool, 'sh-warm').lab);
+  check('暖光与冷光的暖阴影不同', dShLight > 3, 'ΔE ' + dShLight.toFixed(1));
+
+  // 暖光下冷阴影应该比冷光下更"有存在感"
+
+  var dWarmShade = E.deltaE00(pickLight(shadeWarm, 'sh-cool').lab, E.labOfHex(b2));
+  var dCoolShade = E.deltaE00(pickLight(shadeCool, 'sh-cool').lab, E.labOfHex(b2));
+  check('暖光下冷阴影更偏紫', dWarmShade > dCoolShade - 0.5,
+    dWarmShade.toFixed(1) + ' vs ' + dCoolShade.toFixed(1));
+
+  // 三档光照都要六张卡且两两可分
+  ['warm', 'neutral', 'cool'].forEach(function (L) {
+    var v = E.shadeVariants(b2, { light: L });
+    var minDeLight = Infinity;
+    for (var ii = 0; ii < v.length; ii++) {
+      for (var jj = ii + 1; jj < v.length; jj++) {
+        var d = E.deltaE00(v[ii].lab, v[jj].lab);
+        if (d < minDeLight) minDeLight = d;
+      }
+    }
+    check('光照 ' + L + ' 下六张卡两两可分', v.length === 6 && minDeLight >= 3, '最小 ΔE ' + minDeLight.toFixed(1));
+  });
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

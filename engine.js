@@ -2337,7 +2337,9 @@ var assign = new Array(pts.length).fill(0);
    * 冷暖的差别是**色相**，不是明度：把色相往"冷极"（青蓝 200°/270°）
    * 或"暖极"（红橙 10°/40°）转一段，冷阴影与暖阴影相差 60° 以上。
    */
-function shadeVariants(hex) {
+  function shadeVariants(hex, opts) {
+    opts = opts || {};
+    var light = opts.light === 'warm' || opts.light === 'cool' ? opts.light : 'neutral';
     var lab = labOfHex(hex);
     var baseC = Math.hypot(lab[1], lab[2]);
     var baseH = hueAngle(lab);
@@ -2390,14 +2392,43 @@ function shadeVariants(hex) {
       return { id: id, name: name, hex: toHex(L, a, b), lab: [L, a, b], note: note };
     }
 
-    // 六种自然选择：两档高光 + 四档阴影
+    // 六档的含义固定，方向随光照走
+    //   暖光：高光偏橙黄，阴影偏紫蓝
+    //   冷光：高光偏青灰，阴影偏棕红
+    var SET = {
+      warm: {
+        hi:      [13, 0.74, 60, 0.35, '提亮并偏暖（暖光下的高光）', 40],
+        hiw:     [12, 0.86, 45, 0.55, '提亮并更明显地偏橙', 46],
+        sh:      [-14, 0.58, null, 0, '压暗降饱和，色相不动', 26],
+        shw:     [-15, 0.55, 50, 0.35, '压暗并微微偏棕（暖光下用得少）', 22],
+        shc:     [-16, 0.50, 305, 1, '压暗并偏紫（暖光下的主阴影）', 26],
+        shg:     [-15, 0.38, 255, 1, '压暗并偏灰蓝，最不偏色', 18]
+      },
+      neutral: {
+        hi:      [13, 0.72, 78, 0.10, '提亮，稍微向光色靠', 38],
+        hiw:     [12, 0.80, 62, 0.20, '提亮并往暖端移一点', 42],
+        sh:      [-14, 0.58, null, 0, '压暗并明显降饱和', 26],
+        shw:     [-15, 0.62, 45, 1, '压暗、降饱和，往棕调', 28],
+        shc:     [-16, 0.45, 305, 1, '压暗并偏向紫', 24],
+        shg:     [-15, 0.35, 255, 1, '压暗并偏灰蓝，最不偏色', 18]
+      },
+      cool: {
+        hi:      [13, 0.55, 250, 0.10, '提亮并去暖（冷光下的高光，偏冷灰）', 30],
+        hiw:     [12, 0.62, 235, 0.18, '提亮并偏冷灰', 34],
+        sh:      [-14, 0.58, null, 0, '压暗降饱和，色相不动', 26],
+        shw:     [-15, 0.62, 35, 1, '压暗并偏棕红（冷光下的主阴影）', 30],
+        shc:     [-16, 0.40, 320, 1, '压暗并略偏紫（冷光下用得少）', 20],
+        shg:     [-15, 0.35, 250, 1, '压暗并偏灰蓝，最不偏色', 18]
+      }
+    }[light];
+
     var list = [
-      build('hi', '高光', 13, 0.72, 78, 0.10, '提亮并轻微偏暖；不额外加艳', 38),
-      build('hi-warm', '暖高光', 12, 0.78, 62, 0.20, '提亮并往暖端移一点', 42),
-      build('sh', '阴影', -14, 0.58, null, 0, '压暗并明显降饱和', 26),
-      build('sh-warm', '暖阴影', -15, 0.62, 45, 1, '压暗、降饱和，往棕调', 28),
-      build('sh-cool', '冷阴影', -16, 0.45, 305, 1, '压暗并偏向紫，黄红一律走紫', 24),
-      build('sh-gray', '灰蓝阴影', -15, 0.35, 255, 1, '压暗并偏灰蓝，最不偏色', 18)
+      build.apply(null, ['hi', '高光'].concat(SET.hi)),
+      build.apply(null, ['hi-warm', '暖高光'].concat(SET.hiw)),
+      build.apply(null, ['sh', '阴影'].concat(SET.sh)),
+      build.apply(null, ['sh-warm', '暖阴影'].concat(SET.shw)),
+      build.apply(null, ['sh-cool', '冷阴影'].concat(SET.shc)),
+      build.apply(null, ['sh-gray', '灰蓝阴影'].concat(SET.shg))
     ];
 
     // 保证每张卡都看得出差别

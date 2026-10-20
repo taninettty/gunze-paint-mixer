@@ -567,11 +567,19 @@
     list.appendChild(tip);
   }
 
+  function setLight(light) {
+    state.light = light;
+    [].forEach.call(document.querySelectorAll('.light-opt'), function (b) {
+      b.classList.toggle('active', b.dataset.light === light);
+    });
+    renderShades();
+  }
+
   function renderShades() {
     var row = $('shadeRow');
     if (!row) return;
 
-    var variants = E.shadeVariants(state.targetHex);
+    var variants = E.shadeVariants(state.targetHex, { light: state.light || 'neutral' });
     var ids = state.selected.length ? state.selected : E.PIGMENTS.filter(function (p) { return p.mixable; }).slice(0, 6).map(function (p) { return p.code; });
 
     row.innerHTML = '';
@@ -1099,6 +1107,9 @@
   function bindPhoto() {
     $('analyzeBtn').addEventListener('click', openModal);
     if ($('dbgBtn')) $('dbgBtn').addEventListener('click', photoDebug);
+    [].forEach.call(document.querySelectorAll('.light-opt'), function (b) {
+      b.addEventListener('click', function () { setLight(b.dataset.light); });
+    });
     $('modalClose').addEventListener('click', closeModal);
 
     $('analyzeModal').addEventListener('click', function (ev) {
@@ -1501,6 +1512,11 @@
     var res = E.analyzeImage(photo.samples, { k: k, gain: gain });
 
     var light = E.estimateLight(estGain);
+
+    // 估出来的色温直接决定六张卡的方向（用户还能手动改）
+    if (light && typeof setLight === 'function') {
+      setLight(light.cct && light.cct < 4500 ? 'warm' : (light.cct && light.cct > 6000 ? 'cool' : 'neutral'));
+    }
     var lb = $('lightBar');
     if (lb) {
       if (light) {
