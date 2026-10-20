@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', regionSnr: 'function', bandSnr: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -657,6 +657,13 @@ console.log('\n[34] 导出函数清单');
       var w = 32, h = 32, l = new Float32Array(w * h);
       for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) l[y * w + x] = x < 16 ? 0.2 : 0.8;
       return E.segmentRegions(l, w, h, { minArea: 40 });
+    },
+    colorfulness: () => E.colorfulness([200, 40, 40, 20, 200, 40]),
+    colorEntropy: () => E.colorEntropy([[50, 0, 0], [70, 20, 20], [30, -20, 30]]),
+    centerBias: () => {
+      var w = 40, h = 40, l = new Float32Array(w * h);
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) l[y * w + x] = (x > 15 && x < 25 && y > 15 && y < 25) ? 1 : 0;
+      return E.centerBias(l, w, h);
     },
     bandSnr: () => {
       var l = new Float32Array(64 * 64);
@@ -868,6 +875,24 @@ console.log('\n[42] 边缘权重');
   check('边缘权重越小，结构占比越高', w025.share > w05.share && w05.share > w1.share,
     (w1.share * 100).toFixed(1) + '% → ' + (w05.share * 100).toFixed(1) + '% → ' + (w025.share * 100).toFixed(1) + '%');
   check('默认权重是 0.5', Math.abs(w05.edgeWeight - 0.5) < 1e-9, String(w05.edgeWeight));
+}
+
+console.log('\n[43] 有出处的三个量');
+{
+  var gray = [];
+  for (var i = 0; i < 100; i++) gray.push(128, 128, 128);
+  var red = [];
+  for (var j = 0; j < 100; j++) red.push(200, 40, 40);
+
+  check('灰图鲜艳度为 0', Math.abs(E.colorfulness(gray)) < 1e-6, E.colorfulness(gray).toFixed(2));
+  check('红图鲜艳度明显更高', E.colorfulness(red) > 40, E.colorfulness(red).toFixed(1));
+
+  check('单色熵为 0', Math.abs(E.colorEntropy([[50, 0, 0], [50, 0, 0]])) < 1e-6, '0');
+  check('三色熵大于 1', E.colorEntropy([[50, 0, 0], [70, 20, 20], [30, -20, 30]]) > 1, E.colorEntropy([[50, 0, 0], [70, 20, 20], [30, -20, 30]]).toFixed(2));
+
+  var w = 40, h = 40, l = new Float32Array(w * h);
+  for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) l[y * w + x] = (x > 15 && x < 25 && y > 15 && y < 25) ? 1 : 0;
+  check('中心有东西时中心占比 > 1', E.centerBias(l, w, h) > 1, E.centerBias(l, w, h).toFixed(2));
 }
 
 console.log('\n[22] 性能');

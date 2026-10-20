@@ -2650,6 +2650,16 @@
       var edgeW = Number(($('snrEdge') || {}).value) || 0.5;
       var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2, edgeWeight: edgeW });
 
+      // 三个有出处的量（见页面下方标注）
+      var rgbFlat = [];
+      for (var ri = 0; ri < w * h; ri += 5) {
+        var ro = ri * 4;
+        rgbFlat.push(last.data[ro], last.data[ro + 1], last.data[ro + 2]);
+      }
+      var vivid = E.colorfulness(rgbFlat);
+      var cbi = E.centerBias(luma, w, h);
+
+
       // 分区图（只作可视化，不参与打分）
       var seg = E.segmentRegions(luma, w, h, { minArea: Math.max(60, Math.round(w * h / 300)) });
       var octx = $('snrOverlay').getContext('2d');
@@ -2670,6 +2680,7 @@
       var res = E.analyzeImage(last.samples, { k: k });
       var merged = E.mergeSimilar(res.clusters, 6);
       var rep = E.layerReport(merged);
+      var cEnt = E.colorEntropy(merged.map(function (c) { return c.lab; }));
 
       // 背景判定：只看左上和右上两块。
       // 一张模型照片，上方两角几乎总是背景；把整圈边都算进来会被底部的主体稀释。
@@ -2753,8 +2764,10 @@
       $('snrBody').hidden = false;
 
       $('snrRatio').textContent = Math.round(bs.share * 100) + '%';
-      $('snrEffective').textContent = '结构占比 · ' + bs.db.toFixed(1) + ' dB · ' +
-        activeColors + ' 色 / ' + rep.activeCount + ' 层 / 明度差 ' + Math.round(lRange);
+      $('snrEffective').textContent = '鲜艳度 ' + vivid.toFixed(0) +
+        ' · 颜色熵 ' + cEnt.toFixed(1) + ' bit' +
+        ' · 中心占比 ' + cbi.toFixed(2) +
+        ' · 明度差 ' + Math.round(lRange);
 
       var verdict;
       if (bs.share >= 0.75) verdict = '对比主要在形体上：远看能看出块面，细节没抢戏。';

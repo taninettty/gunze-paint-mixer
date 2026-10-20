@@ -2270,6 +2270,64 @@ var assign = new Array(pts.length).fill(0);
    * 纹理（噪声）= 最细的两层
    * 全部零均值后算能量，输出 0~1 的占比和 dB。
    */
+  /**
+   * Hasler–Süsstrunk 鲜艳度。照片常见 44–50（VPF 论文实测 43.99 / 50.03）。
+   */
+  function colorfulness(rgb) {
+    var n = rgb.length / 3;
+    if (!n) return 0;
+    var sRG = 0, sYB = 0, sRG2 = 0, sYB2 = 0;
+    for (var i = 0; i < n; i++) {
+      var r = rgb[i * 3], g = rgb[i * 3 + 1], b = rgb[i * 3 + 2];
+      var rg = r - g, yb = 0.5 * (r + g) - b;
+      sRG += rg; sYB += yb; sRG2 += rg * rg; sYB2 += yb * yb;
+    }
+    var mRG = sRG / n, mYB = sYB / n;
+    var vRG = Math.max(0, sRG2 / n - mRG * mRG);
+    var vYB = Math.max(0, sYB2 / n - mYB * mYB);
+    return Math.sqrt(vRG + vYB) + 0.3 * Math.sqrt(mRG * mRG + mYB * mYB);
+  }
+
+  /**
+   * CIELAB 颜色熵（bit）。照片常见 4.6–5.2（VPF 论文实测 4.608 / 5.156）。
+   */
+  function colorEntropy(labs) {
+    if (!labs || !labs.length) return 0;
+    var bins = {}, n = labs.length;
+    labs.forEach(function (lab) {
+      var L = Math.max(0, Math.min(7, Math.floor(lab[0] / 12.5)));
+      var a = Math.max(0, Math.min(5, Math.floor((lab[1] + 100) / 33.4)));
+      var b = Math.max(0, Math.min(5, Math.floor((lab[2] + 100) / 33.4)));
+      var key = L * 36 + a * 6 + b;
+      bins[key] = (bins[key] || 0) + 1;
+    });
+    var H = 0;
+    for (var k in bins) { var p = bins[k] / n; H -= p * Math.log2(p); }
+    return H;
+  }
+
+  /**
+   * 中心占比：中心 50% 的平均梯度 / 全图平均梯度。
+   * 定义和 VPF 论文的 CBI 不同，只作方向参考。
+   */
+  function centerBias(luma, w, h) {
+    var mag = sobelMagnitude(luma, w, h);
+    var all = 0, nAll = 0, mid = 0, nMid = 0;
+    var x0 = Math.floor(w * 0.25), x1 = Math.floor(w * 0.75);
+    var y0 = Math.floor(h * 0.25), y1 = Math.floor(h * 0.75);
+    for (var y = 0; y < h; y++) {
+      for (var x = 0; x < w; x++) {
+        var v = mag[y * w + x];
+        all += v; nAll++;
+        if (x >= x0 && x < x1 && y >= y0 && y < y1) { mid += v; nMid++; }
+      }
+    }
+    if (!nAll || !nMid) return 0;
+    var mA = all / nAll;
+    return mA > 1e-9 ? (mid / nMid) / mA : 0;
+  }
+
+
   function bandSnr(luma, w, h, opts) {
     opts = opts || {};
     var levels = opts.levels == null ? 3 : opts.levels;
@@ -2843,6 +2901,9 @@ var assign = new Array(pts.length).fill(0);
     segmentRegions: segmentRegions,
     regionSnr: regionSnr,
     bandSnr: bandSnr,
+    colorfulness: colorfulness,
+    colorEntropy: colorEntropy,
+    centerBias: centerBias,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,
