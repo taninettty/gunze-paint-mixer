@@ -590,8 +590,18 @@
     var box = $('layerStack');
     if (!box) return;
 
-    // 目标色变了，旧层的配方就作废
-    state.layers = state.layers.filter(function (L) { return L.baseHex === state.targetHex; });
+    // 目标色变了不删层：按新底色重算配方，并标记
+    var layerIds = state.selected.length ? state.selected
+      : E.PIGMENTS.filter(function (p) { return p.mixable; }).slice(0, 6).map(function (p) { return p.code; });
+
+    state.layers.forEach(function (L) {
+      if (L.baseHex === state.targetHex) return;
+      try {
+        L.tint = E.tintRecipe(state.targetHex, L.hex, layerIds, { volume: 10 });
+        L.rebased = true;
+      } catch (e) { L.tint = null; }
+      L.baseHex = state.targetHex;
+    });
 
     if (!state.layers.length) {
       box.hidden = true;
@@ -612,7 +622,7 @@
 
       var nm = document.createElement('span');
       nm.className = 'lname';
-      nm.textContent = '第 ' + (i + 1) + ' 层 · ' + L.name;
+      nm.textContent = '第 ' + (i + 1) + ' 层 · ' + L.name + (L.rebased ? '（按新底色重算）' : '');
 
       var rc = document.createElement('span');
       rc.className = 'lrc';
@@ -1113,6 +1123,19 @@
     out.push('顺序：先加主色，再按由浅到深加辅色，黑色最后一点点加。');
     out.push('提示：屏幕色非实测，先在小样上试色。');
     return out.join('\n');
+    if (state.layers && state.layers.length) {
+      out.push('');
+      out.push('附加层（底色 ' + r.target.hex + '）');
+      state.layers.forEach(function (L, k) {
+        var s = L.tint
+          ? '底 ' + L.tint.basePct + '% + ' + L.tint.items.map(function (it) {
+              return it.pigment.code + ' ' + it.pigment.name + ' ' + it.pct + '%';
+            }).join(' + ')
+          : L.hex;
+        out.push('  第 ' + (k + 1) + ' 层 ' + L.name + '（' + L.hex + '）：' + s);
+      });
+    }
+
   }
 
   function copyRecipe() {
