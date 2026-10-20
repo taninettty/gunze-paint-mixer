@@ -10,6 +10,7 @@
   var KIND_LABEL = { metal: '金属', clear: '透明', pearl: '珠光', additive: '消光' };
 
   var state = {
+    layers: [],
     targetHex: '#B79764',
     selected: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
     volume: 100
@@ -583,6 +584,61 @@
     renderShades();
   }
 
+  function renderLayers() {
+    var box = $('layerStack');
+    if (!box) return;
+
+    // 目标色变了，旧层的配方就作废
+    state.layers = state.layers.filter(function (L) { return L.baseHex === state.targetHex; });
+
+    if (!state.layers.length) {
+      box.hidden = true;
+      box.innerHTML = '';
+      return;
+    }
+
+    box.hidden = false;
+    box.innerHTML = '<h5>附加层（底色不改，按顺序喷）</h5>';
+
+    state.layers.forEach(function (L, i) {
+      var row = document.createElement('div');
+      row.className = 'layer-item';
+
+      var sw = document.createElement('i');
+      sw.className = 'lsw';
+      sw.style.background = L.hex;
+
+      var nm = document.createElement('span');
+      nm.className = 'lname';
+      nm.textContent = '第 ' + (i + 1) + ' 层 · ' + L.name;
+
+      var rc = document.createElement('span');
+      rc.className = 'lrc';
+      if (L.tint) {
+        rc.textContent = '底 ' + L.tint.basePct + '% · ' + L.tint.items.map(function (it) {
+          return shortName(it.pigment) + ' ' + it.pct + '%';
+        }).join(' · ');
+      } else {
+        rc.textContent = L.hex;
+      }
+
+      var x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'lx';
+      x.textContent = '移除';
+      x.addEventListener('click', function () {
+        state.layers.splice(i, 1);
+        renderLayers();
+      });
+
+      row.appendChild(sw);
+      row.appendChild(nm);
+      row.appendChild(rc);
+      row.appendChild(x);
+      box.appendChild(row);
+    });
+  }
+
   function renderShades() {
     var row = $('shadeRow');
     if (!row) return;
@@ -599,6 +655,7 @@
     var ids = state.selected.length ? state.selected : E.PIGMENTS.filter(function (p) { return p.mixable; }).slice(0, 6).map(function (p) { return p.code; });
 
     row.innerHTML = '';
+    renderLayers();
 
     variants.forEach(function (v) {
       var card = document.createElement('button');
@@ -648,7 +705,17 @@
       card.appendChild(hx);
       card.appendChild(rc);
 
-      card.addEventListener('click', function () { setTarget(v.hex); });
+      card.addEventListener('click', function () {
+        var idx = -1;
+        for (var q = 0; q < state.layers.length; q++) if (state.layers[q].id === v.id) idx = q;
+
+        if (idx >= 0) {
+          state.layers.splice(idx, 1);
+        } else {
+          state.layers.push({ id: v.id, name: v.name, hex: v.hex, tint: tr, baseHex: state.targetHex });
+        }
+        renderLayers();
+      });
 
       row.appendChild(card);
     });

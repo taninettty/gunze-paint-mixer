@@ -485,7 +485,7 @@ node test.js
 ```
 node test.js     # 引擎逻辑，176 项，纯 Node
 node uitest.js   # 冒烟：15 条，验加载与挂载
-node e2e.js      # 端到端：22 条，真的点功能
+node e2e.js      # 端到端：24 条，真的点功能
 ```
 
 冒烟测试会真打开 index.html，检查：没有 JS 报错、三个知识块挂上了、八张缺陷卡都在、漆库 226 支、页签能切、弹窗能开。

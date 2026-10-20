@@ -751,6 +751,17 @@
   }
   .gloss:empty { display: none; }
   .gloss b { color: var(--ink); }
+  .layer-stack { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .layer-stack h5 { font-size: 11.5px; color: var(--ink-2); margin: 0 0 6px; }
+  .layer-item {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+  }
+  .layer-item .lsw { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,.15); }
+  .layer-item .lname { font-weight: 600; }
+  .layer-item .lrc { color: var(--ink-2); }
+  .layer-item .lx { margin-left: auto; border: none; background: none; color: var(--ink-3); cursor: pointer; font-family: inherit; }
+  .layer-item .lx:hover { color: var(--bad); }
   .snap-row {
     display: flex; align-items: center; gap: 8px;
     margin-top: 14px; padding-top: 12px;
@@ -1070,6 +1081,8 @@
       <tbody id="recipeBody"></tbody>
     </table>
 
+      <div class="layer-stack" id="layerStack" hidden></div>
+
     <div class="snap-row">
       <span>主料 5% 步进 · 微调按滴</span>
       <em id="snapDe"></em>
@@ -1128,7 +1141,7 @@
       <div class="shade-row" id="shadeRow"></div>
 
       <p class="layer-tip">
-        假设「目标色 = 某支漆喷在这层底漆上」。同一颜色常有多个解，看 ΔE 差距判断可信度。
+        点阴影卡会把它加成一层（目标色不变）；假设「目标色 = 某支漆喷在这层底漆上」。同一颜色常有多个解，看 ΔE 差距判断可信度。
       </p>
     </div>
   </section>
@@ -1190,7 +1203,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v2.3 · 2026-10</span>
+  <span class="ver" id="appVer">v2.4 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1254,9 +1267,9 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=2.3"></script>
-  <script src="gunze-data.js?v=2.3"></script>
-<script src="engine.js?v=2.3"></script>
-<script src="app.js?v=2.3"></script>
+<script src="kb-data.js?v=2.4"></script>
+  <script src="gunze-data.js?v=2.4"></script>
+<script src="engine.js?v=2.4"></script>
+<script src="app.js?v=2.4"></script>
 </body>
 </html>

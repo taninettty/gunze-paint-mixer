@@ -118,7 +118,11 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message); }
       var before = document.getElementById('targetHexLabel').textContent.trim();
       shadeCards[3].click();
       await sleep(400);
-      set('shadeClickChanged', document.getElementById('targetHexLabel').textContent.trim() !== before);
+      set('shadeKeptTarget', document.getElementById('targetHexLabel').textContent.trim() === before);
+      set('layerCount', document.querySelectorAll('#layerStack .layer-item').length);
+      shadeCards[3].click();
+      await sleep(350);
+      set('layerAfterRemove', document.querySelectorAll('#layerStack .layer-item').length);
     }
 
     // ---------- F 工序模板 ----------
@@ -239,7 +243,9 @@ function main() {
   check('占比合计 100%', Math.abs(c.recipePctSum - 100) < 1.5, c.recipePctSum + '%');
   check('改总量到 50ml 后毫升数跟着变', c.mlSumAt50 == null || Math.abs(c.mlSumAt50 - 50) <= 2, c.mlSumAt50 + ' ml（只算毫升行，滴不计）');
   check('阴影卡 6 张', c.shadeCards === 6, c.shadeCards + ' 张');
-  check('点阴影卡会换目标色', c.shadeClickChanged === true, String(c.shadeClickChanged));
+  check('点阴影卡不改目标色', c.shadeKeptTarget === true, String(c.shadeKeptTarget));
+  check('点阴影卡会加一层', c.layerCount === 1, String(c.layerCount));
+  check('再点一次会移除', c.layerAfterRemove === 0, String(c.layerAfterRemove));
   check('工序模板 5 个', c.procTabs === 5, c.procTabs + ' 个');
   check('每个模板都有步骤', /^\d+(,\d+){4}$/.test(c.stepCounts || ''), c.stepCounts);
   check('每层可换漆', c.paintSelects >= 2, c.paintSelects + ' 个下拉');
