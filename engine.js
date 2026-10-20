@@ -2174,6 +2174,77 @@ var assign = new Array(pts.length).fill(0);
 
 
 
+
+  /**
+   * 分层：按面积占比把颜色分成「底色层 / 主体层 / 点缀层」。
+   *
+   * 不分"信号噪声"——背景也是构图的一部分。
+   * 看的是层次有没有拉开：相邻两层颜色太像，画面就会糊成一片。
+   */
+  function layerReport(clusters, opts) {
+    opts = opts || {};
+    if (!clusters || !clusters.length) return null;
+
+    var baseCut = opts.baseCut == null ? 0.55 : opts.baseCut;   // 底色层占到 55%
+    var midCut = opts.midCut == null ? 0.8 : opts.midCut;      // 主体层再占到 85%
+
+    var sorted = clusters.slice().sort(function (a, b) { return b.share - a.share; });
+    var acc = 0;
+    var layers = [
+      { id: 'base', name: '底色层', colors: [], share: 0 },
+      { id: 'mid', name: '主体层', colors: [], share: 0 },
+      { id: 'accent', name: '点缀层', colors: [], share: 0 }
+    ];
+
+    sorted.forEach(function (c, i) {
+      var li;
+      if (i === 0) li = 0;                 // 最大的一块 = 底色层
+      else if (acc < midCut) li = 1;       // 中间部分 = 主体层
+      else li = 2;                         // 剩下的 = 点缀层
+
+      layers[li].colors.push(c);
+      layers[li].share += c.share;
+      acc += c.share;
+    });
+
+    // 每层的代表色：该层里占比最大的那个
+    layers.forEach(function (L) {
+      L.active = L.colors.length > 0;
+      if (!L.active) { L.hex = null; L.lab = null; return; }
+      var top = L.colors.slice().sort(function (a, b) { return b.share - a.share; })[0];
+      L.hex = top.hex;
+      L.lab = top.lab || labOfHex(top.hex);
+    });
+
+    var active = layers.filter(function (L) { return L.active; });
+
+    // 相邻层的色差：太小说明这层"立"不起来
+    var gaps = [];
+    for (var i = 1; i < active.length; i++) {
+      gaps.push(deltaE00(active[i - 1].lab, active[i].lab));
+    }
+    var minGap = gaps.length ? Math.min.apply(null, gaps) : Infinity;
+
+    var verdict;
+    if (active.length === 1) verdict = '只有一个颜色，谈不上分层。';
+    else if (minGap >= 25) verdict = '层次很清楚：相邻两层差 ' + minGap.toFixed(0) + '，远看也分得开。';
+    else if (minGap >= 12) verdict = '层次够用：相邻两层差 ' + minGap.toFixed(0) + '，近看没问题。';
+    else if (minGap >= 6) verdict = '层次偏弱：相邻两层只差 ' + minGap.toFixed(0) + '，退后两步就糊了。';
+    else verdict = '层次混了：相邻两层几乎同色（差 ' + minGap.toFixed(0) + '）。';
+
+    if (active.length === 3 && layers[2].share > 0.25) {
+      verdict += ' 点缀层占了 ' + Math.round(layers[2].share * 100) + '%，已经不算点缀。';
+    }
+
+    return {
+      layers: layers,
+      activeCount: active.length,
+      gaps: gaps,
+      minGap: minGap,
+      verdict: verdict
+    };
+  }
+
   /**
    * 信噪比：把画面里的颜色分成"信号"和"噪声"。
    *
@@ -2381,6 +2452,7 @@ var assign = new Array(pts.length).fill(0);
     estimateLight: LIGHT.estimateLight,
     noiseReport: noiseReport,
     snrReport: snrReport,
+    layerReport: layerReport,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,

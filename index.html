@@ -620,7 +620,8 @@
     display: flex; align-items: center; gap: 4px;
   }
   .snr-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
-  .snr-legend .lg-signal { background: rgba(46,125,79,.5); }
+  .snr-legend .lg-base { background: rgba(90,120,160,.5); }
+  .snr-legend .lg-signal { background: rgba(46,125,79,.5); margin-left: 10px; }
   .snr-legend .lg-noise { background: rgba(176,58,46,.4); margin-left: 10px; }
   .snr-score {
     display: flex; align-items: baseline; gap: 8px;
@@ -1252,10 +1253,10 @@
 
 </div>
       <section class="panel panel--snr" data-page="snr" hidden>
-        <h2><i class="num">6</i>信噪比检测<span class="hint">这张图的颜色有没有主次</span></h2>
+        <h2><i class="num">6</i>信噪比检测<span class="hint">颜色分了几层，层次立不立得住</span></h2>
 
         <p class="snr-lead">
-          贴一张图，统计每种颜色占了多大面积，算出「信号 : 噪声」，并说明哪些颜色是主角、哪些在抢戏。
+          贴一张图，把颜色按面积分成「底色层 / 主体层 / 点缀层」，看相邻两层拉不拉得开。
         </p>
 
         <div class="row snr-controls">
@@ -1273,7 +1274,7 @@
         <div class="snr-stage" id="snrStage" hidden>
           <canvas id="snrCanvas"></canvas>
           <canvas id="snrOverlay"></canvas>
-          <p class="snr-legend"><i class="lg-signal"></i>主色区域（信号）　<i class="lg-noise"></i>噪声区域</p>
+          <p class="snr-legend"><i class="lg-base"></i>底色层　<i class="lg-signal"></i>主体层　<i class="lg-noise"></i>点缀层</p>
         </div>
 
         <p class="snr-empty" id="snrEmpty">还没有选图。建议用一张模型正面照，背景越干净越准。</p>
@@ -1281,7 +1282,7 @@
         <div class="snr-body" id="snrBody" hidden>
           <div class="snr-score">
             <b id="snrRatio">—</b>
-            <span>信号 : 噪声</span>
+            <span>层</span>
             <em id="snrEffective"></em>
           </div>
           <p class="snr-verdict" id="snrVerdict"></p>
@@ -1314,7 +1315,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v3.3 · 2026-10</span>
+  <span class="ver" id="appVer">v3.4 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1379,11 +1380,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=3.3"></script>
-  <script src="gunze-data.js?v=3.3"></script>
-  <script src="engine-data.js?v=3.3"></script>
-  <script src="engine-light.js?v=3.3"></script>
-<script src="engine.js?v=3.3"></script>
-<script src="app.js?v=3.3"></script>
+<script src="kb-data.js?v=3.4"></script>
+  <script src="gunze-data.js?v=3.4"></script>
+  <script src="engine-data.js?v=3.4"></script>
+  <script src="engine-light.js?v=3.4"></script>
+<script src="engine.js?v=3.4"></script>
+<script src="app.js?v=3.4"></script>
 </body>
 </html>

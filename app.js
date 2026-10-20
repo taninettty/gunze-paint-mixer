@@ -2558,6 +2558,7 @@
     if (!input) return;
 
     var STRIDE = 7;   // 采样步长（像素）
+    var last = null;  // { samples, positions, w, h }
 
     function analyze(file) {
       var url = URL.createObjectURL(file);
@@ -2595,7 +2596,6 @@
           return;
         }
 
-        // 采样 + 记下每个样本落在哪个像素上，后面要按位置画图
         var samples = [], positions = [];
         for (var i = 0; i < w * h; i += STRIDE) {
           var p4 = i * 4;
@@ -2603,91 +2603,100 @@
           positions.push(i);
         }
 
-        var k = Number($('snrK').value) || 6;
-        var res = E.analyzeImage(samples, { k: k });
-
-        // 浅色背景常常面积最大，会把"主色"抢走，默认剔掉接近白/灰的色块。
-        // 注意：这招只对白底/灰底有效，花背景需要手动排除（TODO）。
-        var dropBg = $('snrBg') && $('snrBg').checked;
-        var clusters = res.clusters.filter(function (c) {
-          if (!dropBg) return true;
-          var lab = c.lab || E.labOfHex(c.hex);
-          return !(lab[0] > 88 && Math.hypot(lab[1], lab[2]) < 6);
-        });
-
-        if (!clusters.length) clusters = res.clusters;
-
-        var snr = E.snrReport(clusters);
-
-        if (!snr) {
-          $('snrEmpty').hidden = false;
-          $('snrEmpty').textContent = '这张图几乎只有一个颜色，没有信噪比可言。';
-          $('snrBody').hidden = true;
-          return;
-        }
-
-        // 每个样本归到最近的色块，再决定它是信号还是噪声
-        var centers = snr.colors.map(function (c) {
-          return { rgb: E.hexToRgb(c.hex), hex: c.hex, signal: false };
-        });
-        var mainHex = snr.colors[0].hex;
-        centers.forEach(function (c) { c.signal = c.hex === mainHex; });
-
-        var octx = overlay.getContext('2d');
-        octx.clearRect(0, 0, w, h);
-
-        for (var j = 0; j < samples.length; j++) {
-          var s = samples[j], best = 0, bd = Infinity;
-          for (var m = 0; m < centers.length; m++) {
-            var cr = centers[m].rgb;
-            var d = (s[0] - cr.r) * (s[0] - cr.r) + (s[1] - cr.g) * (s[1] - cr.g) + (s[2] - cr.b) * (s[2] - cr.b);
-            if (d < bd) { bd = d; best = m; }
-          }
-
-          var px = positions[j] % w;
-          var py = Math.floor(positions[j] / w);
-          octx.fillStyle = centers[best].signal ? 'rgba(46,125,79,0.20)' : 'rgba(176,58,46,0.10)';
-          octx.fillRect(px, py, STRIDE, STRIDE);
-        }
-
-        $('snrEmpty').hidden = true;
-        $('snrStage').hidden = false;
-        $('snrBody').hidden = false;
-        $('snrRatio').textContent = snr.ratioText;
-        $('snrEffective').textContent = '有效色数 ' + snr.effectiveColors.toFixed(1) + ' 种';
-        $('snrVerdict').textContent = snr.verdict;
-
-        var list = $('snrColors');
-        list.innerHTML = '';
-
-        snr.colors.forEach(function (c) {
-          var li = document.createElement('li');
-
-          var sw = document.createElement('i');
-          sw.className = 'sw';
-          sw.style.background = c.hex;
-
-          var hx = document.createElement('span');
-          hx.className = 'hx';
-          hx.textContent = c.hex;
-
-          var tag = document.createElement('span');
-          tag.className = 'tag ' + c.role;
-          tag.textContent = c.role === 'signal' ? '信号' : '噪声';
-
-          var sh = document.createElement('span');
-          sh.className = 'sh';
-          sh.textContent = Math.round(c.share * 100) + '%';
-
-          li.appendChild(sw);
-          li.appendChild(hx);
-          li.appendChild(tag);
-          li.appendChild(sh);
-          list.appendChild(li);
-        });
+        last = { samples: samples, positions: positions, w: w, h: h };
+        render();
       };
 
       img.src = url;
+    }
+
+    function render() {
+      if (!last) return;
+
+      var k = Number($('snrK').value) || 6;
+      var res = E.analyzeImage(last.samples, { k: k });
+      var rep = E.layerReport(res.clusters);
+
+      if (!rep) {
+        $('snrEmpty').hidden = false;
+        $('snrEmpty').textContent = '这张图几乎没有颜色信息。';
+        $('snrBody').hidden = true;
+        return;
+      }
+
+      // 每层一个颜色标记；把每个采样点归到最近的色块，再按层涂色
+      var colorToLayer = {};
+      rep.layers.forEach(function (L) {
+        L.colors.forEach(function (c) { colorToLayer[c.hex] = L.id; });
+      });
+
+      var centers = res.clusters.map(function (c) {
+        return { rgb: E.hexToRgb(c.hex), layer: colorToLayer[c.hex] || 'accent' };
+      });
+
+      var TINT = {
+        base: 'rgba(90,120,160,0.12)',
+        mid: 'rgba(46,125,79,0.14)',
+        accent: 'rgba(196,140,40,0.20)'
+      };
+
+      var octx = $('snrOverlay').getContext('2d');
+      octx.clearRect(0, 0, last.w, last.h);
+
+      for (var j = 0; j < last.samples.length; j++) {
+        var s = last.samples[j], best = 0, bd = Infinity;
+        for (var m = 0; m < centers.length; m++) {
+          var cr = centers[m].rgb;
+          var d = (s[0] - cr.r) * (s[0] - cr.r) + (s[1] - cr.g) * (s[1] - cr.g) + (s[2] - cr.b) * (s[2] - cr.b);
+          if (d < bd) { bd = d; best = m; }
+        }
+        var px = last.positions[j] % last.w;
+        var py = Math.floor(last.positions[j] / last.w);
+        octx.fillStyle = TINT[centers[best].layer];
+        octx.fillRect(px, py, STRIDE, STRIDE);
+      }
+
+      $('snrEmpty').hidden = true;
+      $('snrStage').hidden = false;
+      $('snrBody').hidden = false;
+
+      $('snrRatio').textContent = rep.activeCount + ' 层';
+      $('snrEffective').textContent = rep.gaps.length
+        ? '相邻层色差 ' + rep.gaps.map(function (g) { return g.toFixed(0); }).join(' / ')
+        : '';
+      $('snrVerdict').textContent = rep.verdict;
+
+      var list = $('snrColors');
+      list.innerHTML = '';
+
+      rep.layers.forEach(function (L) {
+        if (!L.active) return;
+
+        var li = document.createElement('li');
+
+        var sw = document.createElement('i');
+        sw.className = 'sw';
+        sw.style.background = L.hex;
+
+        var nm = document.createElement('span');
+        nm.className = 'hx';
+        nm.textContent = L.name;
+
+        var sub = document.createElement('span');
+        sub.className = 'hx';
+        sub.style.color = 'var(--ink-3)';
+        sub.textContent = L.colors.length + ' 色';
+
+        var sh = document.createElement('span');
+        sh.className = 'sh';
+        sh.textContent = Math.round(L.share * 100) + '%';
+
+        li.appendChild(sw);
+        li.appendChild(nm);
+        li.appendChild(sub);
+        li.appendChild(sh);
+        list.appendChild(li);
+      });
     }
 
     input.addEventListener('change', function (ev) {
@@ -2695,15 +2704,10 @@
       if (f) analyze(f);
     });
 
-    if ($('snrBg')) $('snrBg').addEventListener('change', function () {
-      var f = input.files && input.files[0];
-      if (f) analyze(f);
-    });
-
-    $('snrK').addEventListener('change', function () {
-      var f = input.files && input.files[0];
-      if (f) analyze(f);
-    });
+    $('snrK').addEventListener('change', render);
+    if ($('snrBg')) {
+      $('snrBg').parentNode.style.display = 'none';   // 分层模式下不需要"忽略背景"
+    }
   }
 
   function start() {

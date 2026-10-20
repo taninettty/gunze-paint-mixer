@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -653,6 +653,11 @@ console.log('\n[34] 导出函数清单');
     wbGain: () => E.wbGain([200, 180, 160]),
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    layerReport: () => E.layerReport([
+      { hex: '#E8E4DC', share: 0.5, lab: [91, 0, 0] },
+      { hex: '#B79764', share: 0.3, lab: [64, 5, 31] },
+      { hex: '#C0392B', share: 0.2, lab: [45, 60, 45] }
+    ]),
     snrReport: () => E.snrReport([
       { hex: '#B79764', share: 0.6, lab: [64, 5, 31] },
       { hex: '#4A3A72', share: 0.25, lab: [30, 10, -20] },
@@ -729,6 +734,22 @@ console.log('\n[36] 信噪比数值');
 
   check('有效色数 ≤ 颜色数', flat.effectiveColors <= flat.colors.length + 0.001,
     flat.effectiveColors.toFixed(2) + ' / ' + flat.colors.length);
+}
+
+console.log('\n[37] 分层');
+{
+  var mk3 = function (hex, share) { return { hex: hex, share: share, lab: E.labOfHex(hex) }; };
+
+  var clear = E.layerReport([mk3('#E8E4DC', 0.5), mk3('#B79764', 0.3), mk3('#C0392B', 0.2)]);
+  check('三个颜色分成三层', clear.activeCount === 3, clear.layers.map(function (L) { return L.name + L.colors.length; }).join(' '));
+  check('层次拉开时不报警', clear.minGap > 20 && clear.verdict.indexOf('糊') < 0, clear.verdict.slice(0, 26));
+
+  var muddy = E.layerReport([mk3('#B79764', 0.6), mk3('#AB8F60', 0.4)]);
+  check('两层太像会说糊', muddy.verdict.indexOf('混') >= 0 || muddy.verdict.indexOf('弱') >= 0, muddy.verdict.slice(0, 26));
+
+  var accents = E.layerReport([mk3('#E8E4DC', 0.4), mk3('#B79764', 0.3), mk3('#C0392B', 0.3)]);
+  check('背景也算层，不单独剔除', accents.layers[0].name === '底色层' && accents.layers[0].colors.length >= 1,
+    accents.layers[0].name + ' ' + accents.layers[0].colors.length);
 }
 
 console.log('\n[22] 性能');
