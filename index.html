@@ -627,6 +627,13 @@
   .snr-assign button:hover { border-color: var(--accent); color: var(--accent); }
   .snr-assign button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
   .snr-assign .sa-clear { margin-left: auto; color: var(--ink-3); }
+  .recipe-sheet { margin: 10px 0 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .recipe-sheet h5 { font-size: 11px; margin: 0 0 6px; color: var(--ink-3); font-weight: 600; letter-spacing: .04em; }
+  .recipe-sheet table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  .recipe-sheet th { text-align: left; font-weight: 500; color: var(--ink-3); padding: 3px 6px 3px 0; border-bottom: 1px solid var(--line); font-size: 10.5px; }
+  .recipe-sheet td { padding: 4px 6px 4px 0; border-bottom: 1px dashed var(--line); vertical-align: top; }
+  .recipe-sheet .rs-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; border: 1px solid rgba(0,0,0,.12); vertical-align: -2px; margin-right: 4px; }
+  .recipe-sheet .rs-tip { font-size: 10.5px; color: var(--ink-3); margin: 6px 0 0; line-height: 1.6; }
   .snr-advice { background: #FBF7EE; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
   .snr-advice h4 { font-size: 12px; margin: 0 0 8px; color: var(--ink); }
   .snr-advice ul { list-style: none; margin: 0; padding: 0; }
@@ -1398,7 +1405,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v5.3 · 2026-10</span>
+  <span class="ver" id="appVer">v5.4 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1451,6 +1458,7 @@
         <div class="palette-strip" id="paletteStrip"></div>
         <div class="result-title" id="resultTitle">分析结果</div>
         <div id="clusterList"></div>
+        <div class="recipe-sheet" id="recipeSheet" hidden></div>
         <div class="noise-box" id="noiseBox" hidden></div>
         <p class="beginner-tip">照片里的颜色受光线影响，只能看个大概。深色件记得先打白底，不然发色会差一截。</p>
       </div>
@@ -1463,11 +1471,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=5.3"></script>
-  <script src="gunze-data.js?v=5.3"></script>
-  <script src="engine-data.js?v=5.3"></script>
-  <script src="engine-light.js?v=5.3"></script>
-<script src="engine.js?v=5.3"></script>
-<script src="app.js?v=5.3"></script>
+<script src="kb-data.js?v=5.4"></script>
+  <script src="gunze-data.js?v=5.4"></script>
+  <script src="engine-data.js?v=5.4"></script>
+  <script src="engine-light.js?v=5.4"></script>
+<script src="engine.js?v=5.4"></script>
+<script src="app.js?v=5.4"></script>
 </body>
 </html>

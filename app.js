@@ -2158,6 +2158,8 @@
       empty.textContent = '没拆出主色，换个拆分数量或关掉「忽略背景」试试';
       list.appendChild(empty);
     }
+
+    renderRecipeSheet();
   }
 
   function clusterRow(c, num) {
@@ -2375,6 +2377,106 @@
     });
 
     return btn;
+  }
+
+  // 复刻清单：把这几块色按明暗排成受光→深阴影，给出从哪支漆调、加几滴
+  function renderRecipeSheet() {
+    var box = $('recipeSheet');
+    if (!box) return;
+
+    var list = (photo.shown || []).slice();
+    if (list.length < 2) {
+      box.hidden = true;
+      return;
+    }
+
+    var sorted = list.slice().sort(function (x, y) { return y.lab[0] - x.lab[0]; });
+    var roles = ['受光面', '中间色', '暗部', '深阴影', '更暗'];
+    var mainIdx = 0;
+    sorted.forEach(function (c, k) { if (c.share > sorted[mainIdx].share) mainIdx = k; });
+
+    var ids = E.PIGMENTS.map(function (p) { return p.id; });
+
+    var rows = sorted.slice(0, 4).map(function (c, k) {
+      var near = E.nearestPaint(c.hex) || null;
+      var paint = near && near.pigment ? near.pigment : null;
+      var rec = paint ? E.tintRecipe(paint.hex, c.hex, ids, { volume: 2 }) : null;
+
+      var addTxt = '—';
+      if (rec && rec.items && rec.items.length) {
+        addTxt = rec.items
+          .filter(function (it) { return it.drops > 0; })
+          .slice(0, 2)
+          .map(function (it) { return it.pigment.code + ' ' + it.drops + ' 滴'; })
+          .join(' + ') || '不用加';
+      }
+
+      return {
+        role: roles[k] + (k === mainIdx ? '（主色）' : ''),
+        hex: c.hex,
+        share: c.share,
+        paint: paint ? paint.code + ' ' + paint.name : '—',
+        dE: near ? near.deltaE : null,
+        add: addTxt,
+        recDE: rec ? rec.deltaE : null
+      };
+    });
+
+    box.hidden = false;
+    box.innerHTML = '';
+
+    var t = document.createElement('h5');
+    t.textContent = '复刻清单 · 按 2ml 配';
+    box.appendChild(t);
+
+    var table = document.createElement('table');
+    var thead = document.createElement('thead');
+    var trh = document.createElement('tr');
+    ['角色', '目标', '用这支', '加什么', '达到'].forEach(function (label) {
+      var th = document.createElement('th');
+      th.textContent = label;
+      trh.appendChild(th);
+    });
+    thead.appendChild(trh);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    rows.forEach(function (r) {
+      var tr = document.createElement('tr');
+
+      var td0 = document.createElement('td');
+      td0.textContent = r.role;
+      tr.appendChild(td0);
+
+      var td1 = document.createElement('td');
+      var sw = document.createElement('i');
+      sw.className = 'rs-sw';
+      sw.style.background = r.hex;
+      td1.appendChild(sw);
+      td1.appendChild(document.createTextNode(Math.round(r.share * 100) + '%'));
+      tr.appendChild(td1);
+
+      var td2 = document.createElement('td');
+      td2.textContent = r.paint + (r.dE != null ? '（ΔE ' + r.dE.toFixed(1) + '）' : '');
+      tr.appendChild(td2);
+
+      var td3 = document.createElement('td');
+      td3.textContent = r.add;
+      tr.appendChild(td3);
+
+      var td4 = document.createElement('td');
+      td4.textContent = r.recDE != null ? 'ΔE ' + r.recDE.toFixed(1) : '—';
+      tr.appendChild(td4);
+
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    box.appendChild(table);
+
+    var tip = document.createElement('p');
+    tip.className = 'rs-tip';
+    tip.textContent = '暗部往棕里走，不要加黑；高光只比中间色亮一档，面积要小；整个件最好只用两个色相。';
+    box.appendChild(tip);
   }
 
   function setMode(mode) {
