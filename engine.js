@@ -2337,101 +2337,171 @@ var assign = new Array(pts.length).fill(0);
    * 冷暖的差别是**色相**，不是明度：把色相往"冷极"（青蓝 200°/270°）
    * 或"暖极"（红橙 10°/40°）转一段，冷阴影与暖阴影相差 60° 以上。
    */
+  // ---------------------------------------------------------------
+  // 真实光照：同一块漆，被不同光谱的光照亮，出来是不同的颜色
+  // ---------------------------------------------------------------
+
+  // CIE D65 相对光谱功率，380–750nm，步长 10nm（38 个点，与 spectral.js 对齐）
+  var D65_SPD = [
+    49.98, 54.65, 82.75, 91.49, 93.43, 86.68, 104.86, 117.01, 117.81, 114.86,
+    115.92, 108.81, 109.35, 108.21, 104.79, 107.69, 104.41, 104.05, 100.00, 96.33,
+    95.79, 88.69, 90.01, 89.60, 87.70, 83.29, 83.70, 80.03, 80.21, 82.28,
+    78.28, 69.72, 71.61, 74.35, 61.60, 69.89, 72.46, 67.31
+  ];
+
+  /**
+   * 黑体光谱（普朗克定律），按 560nm 归一到 100，和 D65 同一尺度。
+   * @param {number} kelvin 色温
+   * @returns {number[]} 38 个波段的相对功率
+   */
+  function planckSPD(kelvin) {
+    var c2 = 1.4388e7;   // nm·K
+    var out = new Array(38);
+    var refIdx = 18;     // 560nm
+    var ref = 0;
+
+    for (var i = 0; i < 38; i++) {
+      var nm = 380 + i * 10;
+      var l5 = Math.pow(nm / 1000, 5);
+      out[i] = 1 / (l5 * (Math.exp(c2 / (nm * kelvin)) - 1));
+      if (i === refIdx) ref = out[i];
+    }
+    for (var j = 0; j < 38; j++) out[j] = out[j] / ref * 100;
+    return out;
+  }
+
+  /**
+   * 把漆的反射率放到某个光源下。
+   *
+   * measure() 内部用的是 D65 加权，所以这里乘上「新光源 / D65」的比值，
+   * 等式就变成 ∫ R·S·CMF，也就是这块漆在 S 下的真实颜色。
+   */
+  function litReflectance(R, spd, gain) {
+    var out = new Array(R.length);
+    for (var i = 0; i < R.length; i++) {
+      var v = R[i] * (spd[i] / D65_SPD[i]) * gain;
+      out[i] = v > 0.999 ? 0.999 : (v < 0 ? 0 : v);
+    }
+    return out;
+  }
+
+  /** 反射率为 1 的白色在该光源下的 XYZ（用来做色适应） */
+  function whiteOf(spd) {
+    var one = new Array(38);
+    for (var i = 0; i < 38; i++) one[i] = 1;
+    return measure(litReflectance(one, spd, 1)).XYZ;
+  }
+
+  var D65_WHITE = [0.95047, 1.0, 1.08883];
+
+  /**
+   * 一块漆在指定光照下的颜色。
+   *
+   * @param {string} hex 漆色
+   * @param {object} o
+   *   cct    光源色温（K）
+   *   gain   照度倍数（1 = 正常，阴影通常 0.4–0.6）
+   *   adapt  色适应程度（0 = 完全按光源原样，1 = 眼睛完全适应）
+   *   spec   高光（镜面反射）叠加，0–0.3
+   */
+  function litColor(hex, o) {
+    o = o || {};
+    var cct = o.cct || 5500;
+    var gain = o.gain == null ? 1 : o.gain;
+    var adapt = o.adapt == null ? 0.8 : o.adapt;
+    var spec = o.spec || 0;
+
+    var spd = planckSPD(cct);
+    var ks = paintKs(hex);
+    var R = new Array(ks.length);
+    for (var q = 0; q < ks.length; q++) R[q] = rOfKs(ks[q]);
+    var m = measure(litReflectance(R, spd, gain));
+
+    var w = whiteOf(spd);
+    var xyz = m.XYZ.slice();
+
+    // 冯·克里斯色适应：按比例把光源白拉回 D65 白，adapt 控制拉回多少
+    for (var i = 0; i < 3; i++) {
+      var ratio = (D65_WHITE[i] / w[i]) * gain;
+      var scale = Math.pow(ratio, adapt);
+      xyz[i] = xyz[i] * scale;
+    }
+
+    // 镜面高光：直接往白色方向加
+    if (spec > 0) {
+      xyz[0] += D65_WHITE[0] * spec;
+      xyz[1] += D65_WHITE[1] * spec;
+      xyz[2] += D65_WHITE[2] * spec;
+    }
+
+    var lab = xyzToLab(xyz);
+    var rgb = labToSrgb(lab);
+    return {
+      hex: rgbToHex(rgb[0], rgb[1], rgb[2]),
+      lab: lab,
+      xyz: xyz
+    };
+  }
+
   function shadeVariants(hex, opts) {
     opts = opts || {};
     var light = opts.light === 'warm' || opts.light === 'cool' ? opts.light : 'neutral';
-    var lab = labOfHex(hex);
-    var baseC = Math.hypot(lab[1], lab[2]);
-    var baseH = hueAngle(lab);
 
-    function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
-    function circ(from, to) { return ((to - from + 540) % 360) - 180; }
-
-    function toHex(L, a, b) {
-      var rgb = labToSrgb([L, Math.max(-128, Math.min(127, a)), Math.max(-128, Math.min(127, b))]);
-      return rgbToHex(rgb[0], rgb[1], rgb[2]);
-    }
-
-    // 中性色没有色相，给固定色偏（a, b）
-    var NEUTRAL = {
-      hi: [0, -2],
-      'hi-warm': [3, 5],
-      sh: [0, 0],
-      'sh-warm': [9, 10],
-      'sh-cool': [11, -15],
-      'sh-gray': [-4, -8]
-    };
-
-    function build(id, name, dL, cScale, targetHue, blend, note, cMax) {
-      var L = clamp(lab[0] + dL, 5, 97);
-      var a, b;
-
-      if (baseC < 6) {
-        var n = NEUTRAL[id];
-        var k = Math.min(1, Math.max(0.35, (L + 8) / 100));
-        a = n[0] * k;
-        b = n[1] * k;
-      } else {
-        var C = baseC * cScale;
-        if (cMax != null && C > cMax) C = cMax;
-        var h = baseH;
-        if (targetHue != null) {
-          var d0 = circ(baseH, targetHue);
-          var rot = d0 * blend;
-          // 位移太小等于没区分：至少要挪 22°
-          if (Math.abs(rot) < 22 && Math.abs(d0) > 30) {
-            rot = (d0 < 0 ? -1 : 1) * 22;
-          }
-          h = baseH + rot;
-        }
-        var r = h * Math.PI / 180;
-        a = C * Math.cos(r);
-        b = C * Math.sin(r);
-      }
-
-      return { id: id, name: name, hex: toHex(L, a, b), lab: [L, a, b], note: note };
-    }
-
-    // 六档的含义固定，方向随光照走
-    //   暖光：高光偏橙黄，阴影偏紫蓝
-    //   冷光：高光偏青灰，阴影偏棕红
-    var SET = {
-      warm: {
-        hi:      [13, 0.74, 60, 0.35, '提亮并偏暖（暖光下的高光）', 40],
-        hiw:     [12, 0.86, 45, 0.55, '提亮并更明显地偏橙', 46],
-        sh:      [-14, 0.58, null, 0, '压暗降饱和，色相不动', 26],
-        shw:     [-15, 0.55, 50, 0.35, '压暗并微微偏棕（暖光下用得少）', 22],
-        shc:     [-16, 0.50, 305, 1, '压暗并偏紫（暖光下的主阴影）', 26],
-        shg:     [-15, 0.38, 255, 1, '压暗并偏灰蓝，最不偏色', 18]
-      },
-      neutral: {
-        hi:      [13, 0.72, 78, 0.10, '提亮，稍微向光色靠', 38],
-        hiw:     [12, 0.80, 62, 0.20, '提亮并往暖端移一点', 42],
-        sh:      [-14, 0.58, null, 0, '压暗并明显降饱和', 26],
-        shw:     [-15, 0.62, 45, 1, '压暗、降饱和，往棕调', 28],
-        shc:     [-16, 0.45, 305, 1, '压暗并偏向紫', 24],
-        shg:     [-15, 0.35, 255, 1, '压暗并偏灰蓝，最不偏色', 18]
-      },
-      cool: {
-        hi:      [13, 0.55, 250, 0.10, '提亮并去暖（冷光下的高光，偏冷灰）', 30],
-        hiw:     [12, 0.62, 235, 0.18, '提亮并偏冷灰', 34],
-        sh:      [-14, 0.58, null, 0, '压暗降饱和，色相不动', 26],
-        shw:     [-15, 0.62, 35, 1, '压暗并偏棕红（冷光下的主阴影）', 30],
-        shc:     [-16, 0.40, 320, 1, '压暗并略偏紫（冷光下用得少）', 20],
-        shg:     [-15, 0.35, 250, 1, '压暗并偏灰蓝，最不偏色', 18]
-      }
+    // 光源设定：同一块漆，换个光源就是另一种颜色
+    var LIGHT = {
+      warm:  { sun: 4200, sun2: 3200, sky: 10000, ground: 4000, deep: 13000 },
+      neutral: { sun: 5200, sun2: 3800, sky: 9000, ground: 4200, deep: 13000 },
+      cool:  { sun: 7000, sun2: 5500, sky: 8000, ground: 4800, deep: 14000 }
     }[light];
 
+    var baseLab = labOfHex(hex);
+
+    // 光谱只负责"色相往哪偏"；明度按阶梯给定，避免高光被晒爆成纯白
+    function mk(id, name, note, o) {
+      var c = litColor(hex, { cct: o.cct, gain: 1, adapt: o.adapt, spec: 0 });
+      var lab = c.lab.slice();
+      lab[0] = Math.max(4, Math.min(97, baseLab[0] + o.dL));
+      if (o.spec) {
+        var k = 1 - o.spec * 3;
+        lab[1] *= k;
+        lab[2] *= k;
+      }
+      var rgb = labToSrgb(lab);
+      return { id: id, name: name, note: note, hex: rgbToHex(rgb[0], rgb[1], rgb[2]), lab: lab };
+    }
+
     var list = [
-      build.apply(null, ['hi', '高光'].concat(SET.hi)),
-      build.apply(null, ['hi-warm', '暖高光'].concat(SET.hiw)),
-      build.apply(null, ['sh', '阴影'].concat(SET.sh)),
-      build.apply(null, ['sh-warm', '暖阴影'].concat(SET.shw)),
-      build.apply(null, ['sh-cool', '冷阴影'].concat(SET.shc)),
-      build.apply(null, ['sh-gray', '灰蓝阴影'].concat(SET.shg))
+      // 直射光：亮、偏暖
+      mk('hi', '高光', '直射光照到的颜色（' + LIGHT.sun + 'K）',
+        { cct: LIGHT.sun, dL: 12, spec: 0.04, adapt: 0.85 }),
+
+      mk('hi-warm', '暖高光', '更暖的直射光（' + LIGHT.sun2 + 'K）',
+        { cct: LIGHT.sun2, dL: 11, spec: 0.06, adapt: 0.8 }),
+
+      // 阴影：只有天空散射，偏冷且变暗
+      mk('sh', '阴影', '天空散射光下的颜色（' + LIGHT.sky + 'K）',
+        { cct: LIGHT.sky, dL: -14, adapt: 0.55 }),
+
+      mk('sh-warm', '暖阴影', '地面反射的暖光（' + LIGHT.ground + 'K）',
+        { cct: LIGHT.ground, dL: -15, adapt: 0.35 }),
+
+      mk('sh-cool', '冷阴影', '深阴影，只有蓝天光（' + LIGHT.deep + 'K）',
+        { cct: LIGHT.deep, dL: -16, adapt: 0.25 }),
+
+      (function () {
+        var g = mk('sh-gray', '中性阴影', '眼睛完全适应的阴影，只剩明度差',
+          { cct: LIGHT.sky, dL: -15, adapt: 0.9 });
+        g.lab = [g.lab[0], 0, 0];
+        var rgb = labToSrgb(g.lab);
+        g.hex = rgbToHex(rgb[0], rgb[1], rgb[2]);
+        return g;
+      })()
     ];
 
-    // 保证每张卡都看得出差别
+    // 从亮到暗排
+    list.sort(function (p, q) { return q.lab[0] - p.lab[0]; });
+
+    // 兜底：物理上很接近的两档，稍微拉开一点，保证肉眼能分
     for (var i = 1; i < list.length; i++) {
       for (var t = 0; t < 4; t++) {
         var minDe = Infinity;
@@ -2441,22 +2511,19 @@ var assign = new Array(pts.length).fill(0);
         }
         if (minDe >= 3) break;
 
-        var L2 = clamp(list[i].lab[0] - 3, 5, 97);
-        var a2 = list[i].lab[1] * 1.05;
-        var b2 = list[i].lab[2] * 1.05;
+        var L2 = Math.max(4, list[i].lab[0] - 3);
+        var a2 = list[i].lab[1] * 1.06;
+        var b2 = list[i].lab[2] * 1.06;
+        var rgb2 = labToSrgb([L2, a2, b2]);
         list[i] = {
           id: list[i].id, name: list[i].name, note: list[i].note,
-          hex: toHex(L2, a2, b2), lab: [L2, a2, b2]
+          hex: rgbToHex(rgb2[0], rgb2[1], rgb2[2]), lab: [L2, a2, b2]
         };
       }
     }
 
-    // 从亮到暗排：卡片的顺序本身就是明度阶梯
-    list.sort(function (p, q) { return q.lab[0] - p.lab[0]; });
-
     return list;
   }
-
   /**
    * 从白平衡增益反推光源色温（McCamy 近似）。
    *
@@ -2650,6 +2717,7 @@ var assign = new Array(pts.length).fill(0);
     castName: castName,
     metalName: metalName,
     shadeVariants: shadeVariants,
+    litColor: litColor,
     tintRecipe: tintRecipe,
     nearestPaints: nearestPaints,
     judgeMetallic: judgeMetallic,
