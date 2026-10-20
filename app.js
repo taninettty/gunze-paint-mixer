@@ -2671,67 +2671,48 @@
       var merged = E.mergeSimilar(res.clusters, 6);
       var rep = E.layerReport(merged);
 
-      // 空间先验：靠边框、尤其上半和左右两角，更可能是背景
-      var borderScore = {};
-      merged.forEach(function (c) { borderScore[c.hex] = { sum: 0, n: 0 }; });
+      // 背景判定：只看最外圈那一条边，取出现最多的颜色。
+      // 之前按"边框加权平均"算，几个亮斑挤在角落就能赢过整片幕布，这里换成投票。
+      var frameW = Math.max(4, Math.round(Math.min(w, h) * 0.06));
+      var votes = {};
+      var totalVotes = 0;
 
-      var stepPx = 3;
-      for (var yy = 0; yy < h; yy += stepPx) {
-        for (var xx = 0; xx < w; xx += stepPx) {
-          var idx2 = (yy * w + xx) * 4;
-          var r0 = last.data[idx2], g0 = last.data[idx2 + 1], b0 = last.data[idx2 + 2];
+      function voteAt(x, y) {
+        var idx2 = (y * w + x) * 4;
+        var r0 = last.data[idx2], g0 = last.data[idx2 + 1], b0 = last.data[idx2 + 2];
 
-          var bestC = null, bd2 = Infinity;
-          merged.forEach(function (c) {
-            var cr = E.hexToRgb(c.hex);
-            var dd2 = (r0 - cr.r) * (r0 - cr.r) + (g0 - cr.g) * (g0 - cr.g) + (b0 - cr.b) * (b0 - cr.b);
-            if (dd2 < bd2) { bd2 = dd2; bestC = c; }
-          });
-          if (!bestC) continue;
+        var bestC = null, bd2 = Infinity;
+        merged.forEach(function (c) {
+          var cr = E.hexToRgb(c.hex);
+          var dd2 = (r0 - cr.r) * (r0 - cr.r) + (g0 - cr.g) * (g0 - cr.g) + (b0 - cr.b) * (b0 - cr.b);
+          if (dd2 < bd2) { bd2 = dd2; bestC = c.hex; }
+        });
+        if (!bestC) return;
+        votes[bestC] = (votes[bestC] || 0) + 1;
+        totalVotes++;
+      }
 
-          var nx = Math.abs(xx - w / 2) / (w / 2);
-          var ny = Math.abs(yy - h / 2) / (h / 2);
-          var edge = Math.max(nx, ny);
-          var wgt = edge > 0.82 ? 1 : (edge > 0.55 ? (edge - 0.55) / 0.27 : 0);
-          if (yy < h * 0.18) wgt = Math.max(wgt, 1);      // 顶部也算背景
-          if (xx < w * 0.1 || xx > w * 0.9) wgt = Math.max(wgt, 0.8); // 左右边缘
-
-          var rec = borderScore[bestC.hex];
-          rec.sum += wgt;
-          rec.n++;
+      for (var fy = 0; fy < frameW; fy++) {
+        for (var fx = 0; fx < w; fx += 2) {
+          voteAt(fx, fy);                 // 上
+          voteAt(fx, h - 1 - fy);         // 下
+        }
+      }
+      for (var fx2 = 0; fx2 < frameW; fx2++) {
+        for (var fy2 = 0; fy2 < h; fy2 += 2) {
+          voteAt(fx2, fy2);               // 左
+          voteAt(w - 1 - fx2, fy2);       // 右
         }
       }
 
-      var bgHex = null, bgBest = 0;
-      Object.keys(borderScore).forEach(function (hex) {
-        var r3 = borderScore[hex];
-        if (!r3.n) return;
-        var avg = r3.sum / r3.n;
-        if (avg > bgBest) { bgBest = avg; bgHex = hex; }
+      var bgHex = null, bgVotes = 0;
+      Object.keys(votes).forEach(function (hex) {
+        if (votes[hex] > bgVotes) { bgVotes = votes[hex]; bgHex = hex; }
       });
 
-      // 边框倾向够强才认背景
-      if (bgBest < 0.55) bgHex = null;
+      // 边上过半是同一个颜色，才认它是背景
+      if (!totalVotes || bgVotes / totalVotes < 0.3) bgHex = null;
 
-      // 重命名：含背景色的那层叫「背景层」，其余按面积排
-      if (bgHex) {
-        var bgLayer = rep.layers.filter(function (L) {
-          return L.active && L.colors.some(function (c) { return c.hex === bgHex; });
-        })[0];
-
-        if (bgLayer) {
-          bgLayer.name = '背景层';
-          bgLayer.isBg = true;
-          var others = rep.layers.filter(function (L) { return L.active && L !== bgLayer; });
-          var NAMES2 = ['主色层', '点缀层'];
-          others.forEach(function (L, k) { L.name = NAMES2[k] || ('第 ' + (k + 1) + ' 色层'); });
-          rep.layers.sort(function (x, y) {
-            if (x.isBg) return -1;
-            if (y.isBg) return 1;
-            return y.share - x.share;
-          });
-        }
-      }
       var activeColors = rep.layers.reduce(function (n, L) { return n + L.colors.length; }, 0);
       var lMin = 101, lMax = -1;
       merged.forEach(function (c) {
