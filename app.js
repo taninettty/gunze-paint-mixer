@@ -1075,7 +1075,7 @@
     var g = grade(res.deltaE, chromaAvg);
     var dirBox = $('mixDir');
     if (dirBox) {
-      var dTxt = res.deltaE < 1.2 ? null : dirText(tLab, pLab);
+      var dTxt = res.deltaE < 0.8 ? null : dirText(tLab, pLab);
       if (dTxt) {
         dirBox.hidden = false;
         dirBox.innerHTML = '';
