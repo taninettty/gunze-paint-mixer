@@ -1605,6 +1605,7 @@
 
       try {
         photo.baseImageData = cv.getContext('2d').getImageData(0, 0, w, h);
+      photo.seg = null;   // 换图必须清掉分区缓存，否则还显示上一张
       } catch (err) {
         showPhotoError('读不出图片像素（画布太大或被浏览器限制），换一张小一点的照片');
         return;
