@@ -2194,6 +2194,119 @@ var assign = new Array(pts.length).fill(0);
     return out;
   }
 
+  // ---------------------------------------------------------------
+  // 卷积信噪比：低频是结构，高频是细节/噪声
+  // ---------------------------------------------------------------
+
+  /** 可分离盒式模糊（O(n)），用来取低频 */
+  function boxBlur(src, w, h, r) {
+    var tmp = new Float32Array(w * h);
+    var out = new Float32Array(w * h);
+    var span = 2 * r + 1;
+
+    // 横向
+    for (var y = 0; y < h; y++) {
+      var row = y * w, sum = 0;
+      for (var x = -r; x <= r; x++) sum += src[row + Math.min(w - 1, Math.max(0, x))];
+      for (var x2 = 0; x2 < w; x2++) {
+        tmp[row + x2] = sum / span;
+        var add = src[row + Math.min(w - 1, x2 + r + 1)];
+        var sub = src[row + Math.max(0, x2 - r)];
+        sum += add - sub;
+      }
+    }
+
+    // 纵向
+    for (var x3 = 0; x3 < w; x3++) {
+      var sum2 = 0;
+      for (var y2 = -r; y2 <= r; y2++) sum2 += tmp[Math.min(h - 1, Math.max(0, y2)) * w + x3];
+      for (var y3 = 0; y3 < h; y3++) {
+        out[y3 * w + x3] = sum2 / span;
+        var add2 = tmp[Math.min(h - 1, y3 + r + 1) * w + x3];
+        var sub2 = tmp[Math.max(0, y3 - r) * w + x3];
+        sum2 += add2 - sub2;
+      }
+    }
+    return out;
+  }
+
+  /**
+   * 用卷积算信噪比。
+   *
+   * 低频（模糊后）= 结构、体积、大形状 → 信号
+   * 高频（原图 − 模糊）= 边缘、纹理、杂色 → 细节/噪声
+   *
+   * 返回全局比值和逐块的信噪比图（用来标"哪里高哪里低"）。
+   */
+  function freqSnr(luma, w, h, opts) {
+    opts = opts || {};
+    var radius = opts.radius == null ? 4 : opts.radius;
+    var tile = opts.tile == null ? 16 : opts.tile;
+
+    var low = boxBlur(luma, w, h, radius);
+
+    // 先去均值：低频里含着整张图的平均亮度，不减掉的话比值会被亮度虚高
+    var mean = 0;
+    for (var m0 = 0; m0 < w * h; m0++) mean += low[m0];
+    mean /= w * h;
+
+    var eLow = 0, eHigh = 0;
+    var high = new Float32Array(w * h);
+    for (var i = 0; i < w * h; i++) {
+      var d = luma[i] - low[i];
+      var s0 = low[i] - mean;
+      high[i] = d;
+      eLow += s0 * s0;
+      eHigh += d * d;
+    }
+    eLow /= w * h;
+    eHigh /= w * h;
+
+    var ratio = eLow / Math.max(1e-6, eHigh);
+    var db = 10 * Math.log10(Math.max(1e-6, ratio));
+
+    // 逐块：每块算自己的低频/高频能量
+    var cols = Math.ceil(w / tile), rows = Math.ceil(h / tile);
+    var map = new Float32Array(cols * rows);
+
+    for (var ty = 0; ty < rows; ty++) {
+      for (var tx = 0; tx < cols; tx++) {
+        var sl = 0, sh = 0, n = 0, ml = 0;
+        for (var y = ty * tile; y < Math.min(h, (ty + 1) * tile); y++) {
+          for (var x = tx * tile; x < Math.min(w, (tx + 1) * tile); x++) {
+            var idx = y * w + x;
+            ml += low[idx];
+            sh += high[idx] * high[idx];
+            n++;
+          }
+        }
+        ml /= n;
+        for (var y2 = ty * tile; y2 < Math.min(h, (ty + 1) * tile); y2++) {
+          for (var x2 = tx * tile; x2 < Math.min(w, (tx + 1) * tile); x2++) {
+            var d2 = low[y2 * w + x2] - ml;
+            sl += d2 * d2;
+          }
+        }
+        var r2 = (sl / n) / Math.max(1e-6, sh / n);
+        map[ty * cols + tx] = r2;
+      }
+    }
+
+    return {
+      eLow: eLow,
+      eHigh: eHigh,
+      ratio: ratio,
+      db: db,
+      radius: radius,
+      cols: cols,
+      rows: rows,
+      tile: tile,
+      map: map,
+      low: low,
+      high: high
+    };
+  }
+
   /**
    * 分层：按面积占比把颜色分成「底色层 / 主体层 / 点缀层」。
    *
@@ -2485,6 +2598,7 @@ var assign = new Array(pts.length).fill(0);
     snrReport: snrReport,
     layerReport: layerReport,
     mergeSimilar: mergeSimilar,
+    freqSnr: freqSnr,
     castName: castName,
     metalName: metalName,
     shadeVariants: LIGHT.shadeVariants,

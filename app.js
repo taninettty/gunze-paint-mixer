@@ -2606,7 +2606,7 @@
           positions.push(i);
         }
 
-        last = { samples: samples, positions: positions, w: w, h: h };
+        last = { samples: samples, positions: positions, w: w, h: h, data: data };
         render();
       };
 
@@ -2617,61 +2617,54 @@
       if (!last) return;
 
       var k = Number($('snrK').value) || 6;
+
+      // 卷积信噪比：低频=结构，高频=细节
+      var w = last.w, h = last.h;
+      var luma = new Float32Array(w * h);
+      for (var li = 0; li < w * h; li++) {
+        var lp = li * 4;
+        luma[li] = (last.data[lp] * 0.299 + last.data[lp + 1] * 0.587 + last.data[lp + 2] * 0.114) / 255;
+      }
+      var fs2 = E.freqSnr(luma, w, h, { radius: 4, tile: 16 });
+
+      // 逐块涂色：结构强=绿，细节强=红
+      var octx = $('snrOverlay').getContext('2d');
+      octx.clearRect(0, 0, w, h);
+
+      var T = fs2.tile;
+      for (var ty = 0; ty < fs2.rows; ty++) {
+        for (var tx = 0; tx < fs2.cols; tx++) {
+          var v = fs2.map[ty * fs2.cols + tx];
+          // 0.5 → 黄；越大越绿（结构），越小越红（细节）
+          var t = Math.max(0, Math.min(1, (Math.log10(Math.max(0.05, v)) + 1.3) / 2.3));
+          var rr = Math.round(200 - 154 * t);
+          var gg = Math.round(70 + 90 * t);
+          var bb = Math.round(60 + 10 * t);
+          octx.fillStyle = 'rgba(' + rr + ',' + gg + ',' + bb + ',0.34)';
+          octx.fillRect(tx * T, ty * T, T, T);
+        }
+      }
+
+      // 颜色分层（参考）
       var res = E.analyzeImage(last.samples, { k: k });
       var merged = E.mergeSimilar(res.clusters, 6);
       var rep = E.layerReport(merged);
-
-      if (!rep) {
-        $('snrEmpty').hidden = false;
-        $('snrEmpty').textContent = '这张图几乎没有颜色信息。';
-        $('snrBody').hidden = true;
-        return;
-      }
-
-      // 每层一个颜色标记；把每个采样点归到最近的色块，再按层涂色
-      var colorToLayer = {};
-      rep.layers.forEach(function (L) {
-        L.colors.forEach(function (c) { colorToLayer[c.hex] = L.id; });
-      });
-
-      var centers = merged.map(function (c) {
-        return { rgb: E.hexToRgb(c.hex), layer: colorToLayer[c.hex] || 'accent' };
-      });
-
-      var TINT = {
-        base: 'rgba(90,120,160,0.10)',
-        mid: 'rgba(46,125,79,0.11)',
-        accent: 'rgba(196,140,40,0.17)'
-      };
-
-      var octx = $('snrOverlay').getContext('2d');
-      octx.clearRect(0, 0, last.w, last.h);
-
-      for (var j = 0; j < last.samples.length; j++) {
-        var s = last.samples[j], best = 0, bd = Infinity;
-        for (var m = 0; m < centers.length; m++) {
-          var cr = centers[m].rgb;
-          var d = (s[0] - cr.r) * (s[0] - cr.r) + (s[1] - cr.g) * (s[1] - cr.g) + (s[2] - cr.b) * (s[2] - cr.b);
-          if (d < bd) { bd = d; best = m; }
-        }
-        var px = last.positions[j] % last.w;
-        var py = Math.floor(last.positions[j] / last.w);
-        octx.fillStyle = TINT[centers[best].layer];
-        octx.fillRect(px, py, STRIDE, STRIDE);
-      }
 
       $('snrEmpty').hidden = true;
       $('snrStage').hidden = false;
       $('snrBody').hidden = false;
 
-      $('snrRatio').textContent = rep.activeCount + ' 层';
-      var activeL = rep.layers.filter(function (L) { return L.active; });
-      $('snrEffective').textContent = rep.gaps.length
-        ? rep.gaps.map(function (g, i) {
-            return activeL[i].name.replace('层', '') + '→' + activeL[i + 1].name.replace('层', '') + ' ' + g.toFixed(0);
-          }).join(' · ')
-        : '';
-      $('snrVerdict').textContent = rep.verdict;
+      $('snrRatio').textContent = fs2.db.toFixed(0) + ' dB';
+      $('snrEffective').textContent = '结构 : 细节 = ' +
+        (fs2.ratio >= 100 ? Math.round(fs2.ratio) : fs2.ratio.toFixed(1)) + ' : 1';
+
+      var verdict = fs2.db >= 18
+        ? '结构为主：画面靠形体和大色块支撑，细节不抢戏。'
+        : fs2.db >= 8
+          ? '结构与细节相当：有体积也有信息，注意别让细节铺满。'
+          : '细节压过结构：碎边和纹理太多，退后两步会糊成一片。';
+      $('snrVerdict').textContent = verdict + '（颜色分层：' + rep.activeCount + ' 层，' +
+        rep.verdict.replace(/^[^：]*：/, '') + '）';
 
       var list = $('snrColors');
       list.innerHTML = '';

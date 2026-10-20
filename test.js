@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -653,6 +653,7 @@ console.log('\n[34] 导出函数清单');
     wbGain: () => E.wbGain([200, 180, 160]),
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    freqSnr: () => E.freqSnr(new Float32Array(64 * 64).fill(0.5), 64, 64, { radius: 2, tile: 16 }),
     mergeSimilar: () => E.mergeSimilar([
       { hex: '#E8C24A', share: 0.6, lab: [80, 5, 60] },
       { hex: '#E0BA45', share: 0.4, lab: [78, 5, 58] }
@@ -766,6 +767,28 @@ console.log('\n[38] 相近色合并');
 
   var diff = E.mergeSimilar([mk4('#E8C24A', 0.5), mk4('#3A5C88', 0.5)], 6);
   check('差别大的不合并', diff.length === 2, diff.length + ' 块');
+}
+
+console.log('\n[39] 卷积信噪比');
+{
+  var W = 64, H = 64;
+
+  function pattern(fn) {
+    var l = new Float32Array(W * H);
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) l[y * W + x] = fn(x, y);
+    return l;
+  }
+
+  var smooth = E.freqSnr(pattern(function (x) { return 0.2 + 0.6 * x / W; }), W, H, { radius: 4, tile: 16 });
+  check('平滑渐变被判为结构为主', smooth.db > 20, smooth.db.toFixed(1) + ' dB');
+
+  var noise = E.freqSnr(pattern(function () { return Math.random(); }), W, H, { radius: 4, tile: 16 });
+  check('随机噪声的比值明显更低', noise.db < smooth.db - 10, noise.db.toFixed(1) + ' dB');
+
+  var checker = E.freqSnr(pattern(function (x, y) { return ((x >> 2) + (y >> 2)) % 2 ? 0.9 : 0.1; }), W, H, { radius: 4, tile: 16 });
+  check('高频棋盘的比值最低', checker.db < noise.db, checker.db.toFixed(1) + ' dB');
+
+  check('分块尺寸对得上', smooth.cols === 4 && smooth.rows === 4, smooth.cols + 'x' + smooth.rows);
 }
 
 console.log('\n[22] 性能');
