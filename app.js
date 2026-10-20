@@ -2679,6 +2679,7 @@
       // 颜色分层（参考信息）
       var res = E.analyzeImage(last.samples, { k: k });
       var merged = E.mergeSimilar(res.clusters, 6);
+      last.merged = merged;
       var rep = E.layerReport(merged);
       var cEnt = E.colorEntropy(merged.map(function (c) { return c.lab; }));
 
@@ -2759,6 +2760,28 @@
       });
       var lRange = lMax - lMin;
 
+      // 手工指定优先：把每个颜色归到指定角色，重算占比
+      var manual = Object.keys(roles).length > 0;
+      if (manual) {
+        var roleShare = { bg: 0, main: 0, accent: 0 };
+        merged.forEach(function (c) {
+          var r4 = roles[c.hex];
+          if (r4) roleShare[r4] += c.share;
+        });
+        rep.layers.forEach(function (L) {
+          var r5 = null;
+          L.colors.forEach(function (c) { if (roles[c.hex]) r5 = roles[c.hex]; });
+          if (r5 === 'bg') { L.name = '背景层'; L.isBg = true; }
+          else if (r5 === 'main') { L.name = '主色层'; L.isBg = false; }
+          else if (r5 === 'accent') { L.name = '点缀层'; L.isBg = false; }
+        });
+        rep.layers.sort(function (x5, y5) {
+          if (x5.isBg) return -1;
+          if (y5.isBg) return 1;
+          return y5.share - x5.share;
+        });
+      }
+
       $('snrEmpty').hidden = true;
       $('snrStage').hidden = false;
       $('snrBody').hidden = false;
@@ -2773,7 +2796,14 @@
       if (bs.share >= 0.75) verdict = '对比主要在形体上：远看能看出块面，细节没抢戏。';
       else if (bs.share >= 0.45) verdict = '形体和细节各占一半：还能读，细节再多就糊。';
       else verdict = '对比主要在细节上：刻线、水贴、颗粒占了上风，退后两步会糊成一片。';
-      $('snrVerdict').textContent = verdict;
+      if (manual) {
+        $('snrVerdict').textContent = verdict +
+          '（手工指定：背景 ' + Math.round(roleShare.bg * 100) +
+          '% · 主体 ' + Math.round(roleShare.main * 100) +
+          '% · 点缀 ' + Math.round(roleShare.accent * 100) + '%）';
+      } else {
+        $('snrVerdict').textContent = verdict;
+      }
 
       // 建议栏：把数字翻译成动作
       var tips = [];
@@ -2852,11 +2882,72 @@
       });
     }
 
+    // ---- 点选：点一下选中颜色，再指定背景/主体/点缀 ----
+    var pickedHex = null;
+    var roles = {};          // hex -> 'bg' | 'main' | 'accent'
+
+    function pickAt(ev) {
+      if (!last || !last.merged) return;
+      var overlay = $('snrOverlay');
+      var r = overlay.getBoundingClientRect();
+      var x = Math.round((ev.clientX - r.left) / r.width * last.w);
+      var y = Math.round((ev.clientY - r.top) / r.height * last.h);
+      if (x < 0 || y < 0 || x >= last.w || y >= last.h) return;
+
+      var idx = (y * last.w + x) * 4;
+      var r0 = last.data[idx], g0 = last.data[idx + 1], b0 = last.data[idx + 2];
+
+      var best = null, bd = Infinity;
+      last.merged.forEach(function (c) {
+        var cr = E.hexToRgb(c.hex);
+        var d = (r0 - cr.r) * (r0 - cr.r) + (g0 - cr.g) * (g0 - cr.g) + (b0 - cr.b) * (b0 - cr.b);
+        if (d < bd) { bd = d; best = c; }
+      });
+      if (!best) return;
+
+      pickedHex = best.hex;
+      $('snrAssign').hidden = false;
+      $('snrPickSw').style.background = pickedHex;
+      $('snrPickHex').textContent = pickedHex;
+
+      [].forEach.call(document.querySelectorAll('.snr-assign button[data-role]'), function (btn) {
+        btn.classList.toggle('on', roles[pickedHex] === btn.dataset.role);
+      });
+    }
+
+    function applyRole(role) {
+      if (!pickedHex) return;
+      if (roles[pickedHex] === role) delete roles[pickedHex];
+      else roles[pickedHex] = role;
+
+      [].forEach.call(document.querySelectorAll('.snr-assign button[data-role]'), function (btn) {
+        btn.classList.toggle('on', roles[pickedHex] === btn.dataset.role);
+      });
+      render();
+    }
+
+    function bindAssign() {
+      if (!$('snrOverlay')) return;
+      $('snrOverlay').addEventListener('click', pickAt);
+      [].forEach.call(document.querySelectorAll('.snr-assign button[data-role]'), function (btn) {
+        btn.addEventListener('click', function () { applyRole(btn.dataset.role); });
+      });
+      if ($('snrClearRoles')) {
+        $('snrClearRoles').addEventListener('click', function () {
+          roles = {};
+          pickedHex = null;
+          $('snrAssign').hidden = true;
+          render();
+        });
+      }
+    }
+
     input.addEventListener('change', function (ev) {
       var f = ev.target.files && ev.target.files[0];
       if (f) analyze(f);
     });
 
+    bindAssign();
     $('snrK').addEventListener('change', render);
     if ($('snrEdge')) $('snrEdge').addEventListener('change', render);
     if ($('snrBg')) {

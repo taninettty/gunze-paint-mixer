@@ -613,6 +613,20 @@
     .panel--snr { grid-template-columns: 1fr; }
     .panel--snr > .snr-advice { grid-column: 1; grid-row: auto; }
   }
+  .snr-assign {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 8px 0 0; font-size: 11.5px; color: var(--ink-2);
+  }
+  .snr-assign .sa-sw { width: 16px; height: 16px; border-radius: 4px; border: 1px solid rgba(0,0,0,.15); }
+  .snr-assign code { font-family: ui-monospace, Consolas, monospace; font-size: 11px; }
+  .snr-assign button {
+    height: 24px; padding: 0 10px; border-radius: 999px;
+    border: 1px solid var(--line); background: #fff;
+    font-family: inherit; font-size: 11px; color: var(--ink-2); cursor: pointer;
+  }
+  .snr-assign button:hover { border-color: var(--accent); color: var(--accent); }
+  .snr-assign button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .snr-assign .sa-clear { margin-left: auto; color: var(--ink-3); }
   .snr-advice { background: #FBF7EE; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
   .snr-advice h4 { font-size: 12px; margin: 0 0 8px; color: var(--ink); }
   .snr-advice ul { list-style: none; margin: 0; padding: 0; }
@@ -1322,7 +1336,18 @@
 
         <p class="snr-empty" id="snrEmpty">还没有选图。建议用一张模型正面照，背景越干净越准。</p>
 
-        <div class="snr-body" id="snrBody" hidden>
+                <div class="snr-assign" id="snrAssign" hidden>
+          <span class="sa-label">选中</span>
+          <i class="sa-sw" id="snrPickSw"></i>
+          <code id="snrPickHex"></code>
+          <span class="sa-arrow">设为</span>
+          <button type="button" data-role="bg">背景</button>
+          <button type="button" data-role="main">主体</button>
+          <button type="button" data-role="accent">点缀</button>
+          <button type="button" class="sa-clear" id="snrClearRoles">清除</button>
+        </div>
+
+<div class="snr-body" id="snrBody" hidden>
           <div class="snr-score">
             <b id="snrRatio">—</b>
             <span>结构占比</span>
@@ -1367,7 +1392,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v4.6 · 2026-10</span>
+  <span class="ver" id="appVer">v5.0 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1432,11 +1457,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=4.6"></script>
-  <script src="gunze-data.js?v=4.6"></script>
-  <script src="engine-data.js?v=4.6"></script>
-  <script src="engine-light.js?v=4.6"></script>
-<script src="engine.js?v=4.6"></script>
-<script src="app.js?v=4.6"></script>
+<script src="kb-data.js?v=5.0"></script>
+  <script src="gunze-data.js?v=5.0"></script>
+  <script src="engine-data.js?v=5.0"></script>
+  <script src="engine-light.js?v=5.0"></script>
+<script src="engine.js?v=5.0"></script>
+<script src="app.js?v=5.0"></script>
 </body>
 </html>
