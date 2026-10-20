@@ -3072,9 +3072,20 @@
         var box = $('snrRecipe');
         if (!box) return;
 
-        if (merged.length < 2) { box.hidden = true; return; }
+        // 用角落认出的背景色，把相近的色块从清单里剔除
+        var pool = merged, dropped = 0;
+        if (bgHex) {
+          var bgLab2 = E.labOfHex(bgHex);
+          var kept = merged.filter(function (c) { return E.deltaE00(c.lab, bgLab2) > 9; });
+          if (kept.length >= 2) {
+            dropped = merged.length - kept.length;
+            pool = kept;
+          }
+        }
 
-        var sorted = merged.slice().sort(function (x, y) { return y.lab[0] - x.lab[0]; });
+        if (pool.length < 2) { box.hidden = true; return; }
+
+        var sorted = pool.slice().sort(function (x, y) { return y.lab[0] - x.lab[0]; });
         var roles = ['受光面', '中间色', '暗部', '深阴影'];
         var mainIdx = 0;
         sorted.forEach(function (c, k) { if (c.share > sorted[mainIdx].share) mainIdx = k; });
@@ -3085,7 +3096,7 @@
         box.innerHTML = '';
 
         var ttl = document.createElement('h5');
-        ttl.textContent = '复刻清单 · 按 2ml 配';
+        ttl.textContent = '复刻清单 · 按 2ml 配' + (dropped ? '（已排除背景 ' + dropped + ' 块）' : '');
         box.appendChild(ttl);
 
         var table = document.createElement('table');
