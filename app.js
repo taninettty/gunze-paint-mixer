@@ -3072,16 +3072,16 @@
         var box = $('snrRecipe');
         if (!box) return;
 
-        // 用角落认出的背景色，把相近的色块从清单里剔除
-        var pool = merged, dropped = 0;
-        if (bgHex) {
-          var bgLab2 = E.labOfHex(bgHex);
-          var kept = merged.filter(function (c) { return E.deltaE00(c.lab, bgLab2) > 9; });
-          if (kept.length >= 2) {
-            dropped = merged.length - kept.length;
-            pool = kept;
-          }
-        }
+        // 剔除：手动点掉的 + 和角落背景色相近的
+        var bgLab2 = bgHex ? E.labOfHex(bgHex) : null;
+        var pool = merged.filter(function (c) {
+          if (excluded[c.hex]) return false;
+          if (bgLab2 && E.deltaE00(c.lab, bgLab2) <= 9) return false;
+          return true;
+        });
+        var dropped = merged.length - pool.length;
+        if (pool.length < 2) pool = merged.filter(function (c) { return !excluded[c.hex]; });
+        if (pool.length < 2) pool = merged;
 
         if (pool.length < 2) { box.hidden = true; return; }
 
@@ -3144,6 +3144,30 @@
         box.appendChild(table);
       })();
 
+      // 已排除的色块：点一下可以放回来
+      (function () {
+        var box = $('snrExcluded');
+        if (!box) return;
+        var keys = Object.keys(excluded);
+        box.hidden = keys.length === 0;
+        box.innerHTML = '';
+        keys.forEach(function (hex2) {
+          var chip = document.createElement('button');
+          chip.type = 'button';
+          chip.className = 'ex-chip';
+          var sw2 = document.createElement('i');
+          sw2.style.background = hex2;
+          chip.appendChild(sw2);
+          chip.appendChild(document.createTextNode(hex2 + ' ×'));
+          chip.title = '点一下放回来';
+          chip.addEventListener('click', function () {
+            delete excluded[hex2];
+            render();
+          });
+          box.appendChild(chip);
+        });
+      })();
+
       var list = $('snrColors');
       list.innerHTML = '';
 
@@ -3182,6 +3206,7 @@
     // ---- 点选：点一下选中颜色，再指定背景/主体/点缀 ----
     var pickedHex = null;
     var roles = {};          // hex -> 'bg' | 'main' | 'accent'
+    var excluded = {};       // hex -> true，从复刻清单里剔除
 
     function pickAt(ev) {
       if (!last || !last.merged) return;
@@ -3207,20 +3232,33 @@
       $('snrPickSw').style.background = pickedHex;
       $('snrPickHex').textContent = pickedHex;
 
-      [].forEach.call(document.querySelectorAll('.snr-assign button[data-role]'), function (btn) {
-        btn.classList.toggle('on', roles[pickedHex] === btn.dataset.role);
-      });
+      syncButtons();
     }
 
     function applyRole(role) {
       if (!pickedHex) return;
+
+      if (role === 'exclude') {
+        if (excluded[pickedHex]) delete excluded[pickedHex];
+        else excluded[pickedHex] = true;
+        syncButtons();
+        render();
+        return;
+      }
+
       if (roles[pickedHex] === role) delete roles[pickedHex];
       else roles[pickedHex] = role;
 
-      [].forEach.call(document.querySelectorAll('.snr-assign button[data-role]'), function (btn) {
-        btn.classList.toggle('on', roles[pickedHex] === btn.dataset.role);
-      });
+      syncButtons();
       render();
+    }
+
+    function syncButtons() {
+      [].forEach.call(document.querySelectorAll('.snr-assign button[data-role]'), function (btn) {
+        var r = btn.dataset.role;
+        var on = r === 'exclude' ? !!excluded[pickedHex] : roles[pickedHex] === r;
+        btn.classList.toggle('on', on);
+      });
     }
 
     function bindAssign() {
