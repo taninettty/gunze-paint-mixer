@@ -2607,6 +2607,37 @@
         if (right !== a || down !== a) {
           dst[i] *= 0.55; dst[i + 1] *= 0.55; dst[i + 2] *= 0.55;
         }
+      } else if (mode === 'region') {
+        // 卷积分区：Sobel 找边界 → Otsu 阈值 → 连通域
+        if (!photo.seg) {
+          var lw = w, lh = h;
+          var luma = new Float32Array(lw * lh);
+          for (var li = 0; li < lw * lh; li++) {
+            var lo = li * 4;
+            luma[li] = (src[lo] * 0.299 + src[lo + 1] * 0.587 + src[lo + 2] * 0.114) / 255;
+          }
+          photo.seg = E.segmentRegions(luma, lw, lh, {
+            minArea: Math.max(80, Math.round(lw * lh / 300))
+          });
+        }
+
+        var seg = photo.seg;
+
+        if (seg.isEdge[p]) {
+          dst[i] = 40; dst[i + 1] = 38; dst[i + 2] = 34;
+        } else if (seg.labels[p] < 0) {
+          var g2 = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+          dst[i] = g2; dst[i + 1] = g2; dst[i + 2] = g2;
+        } else {
+          // 每个区域一个色相，透明度低，保留原图明暗
+          var hue = (seg.labels[p] * 137.508) % 360;
+          var rgb2 = hslToRgb(hue / 360, 0.32, 0.60);
+          var src2 = src[i] * 0.299 + src[i + 1] * 0.587 + src[i + 2] * 0.114;
+          var mixv = 0.28;
+          dst[i] = rgb2[0] * (0.55 + src2 / 510) + src[i] * mixv * 0.5;
+          dst[i + 1] = rgb2[1] * (0.55 + src2 / 510) + src[i + 1] * mixv * 0.5;
+          dst[i + 2] = rgb2[2] * (0.55 + src2 / 510) + src[i + 2] * mixv * 0.5;
+        }
       } else if (focus != null) {
         if (a === focus) {
           dst[i] = src[i];
