@@ -599,6 +599,94 @@ console.log('\n[33] 物理风与美术风');
     hr(bluePh).lab[1].toFixed(1) + ' → ' + hr(blueAr).lab[1].toFixed(1));
 }
 
+console.log('\n[34] 导出函数清单');
+{
+  // 拆文件前先钉死：这些导出必须一直在，且能跑
+  const EXPECT = {
+    PIGMENTS: 'object', BASE_PAINT: 'object', PRESETS: 'object',
+    PROCESSES: 'object', PROCESS_TIPS: 'object', SPRAY_KB: 'object',
+    CLEAR_HINTS: 'object', PRIMERS: 'object',
+    DROP_ML: 'number',
+
+    solve: 'function', solveMixed: 'function', solveLayered: 'function',
+    snapRecipe: 'function', quantizeRecipe: 'function',
+    nearestPaint: 'function', nearestPaints: 'function',
+    buildProcess: 'function',
+    analyzeImage: 'function', classifyPixels: 'function', smoothLabels: 'function',
+    growRegion: 'function', rectRegion: 'function',
+    shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
+    estimateLight: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function',
+    judgeMetallic: 'function', analyzeGloss: 'function',
+    shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
+    deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
+    rgbToHex: 'function', ksOf: 'function', mixSpectrum: 'function',
+    measure: 'function', setLib: 'function'
+  };
+
+  const names = Object.keys(EXPECT);
+  const missing = names.filter(n => !(n in E));
+  const extra = Object.keys(E).filter(k => !(k in EXPECT));
+  const wrongType = names.filter(n => n in E && typeof E[n] !== EXPECT[n]);
+
+  check('导出数量对得上', Object.keys(E).length === names.length,
+    Object.keys(E).length + ' 个');
+  check('没有缺失的导出', missing.length === 0, missing.join(',') || '全部存在');
+  check('没有多余的导出', extra.length === 0, extra.join(',') || '无新增');
+  check('类型都对', wrongType.length === 0, wrongType.join(',') || 'ok');
+
+  // 每个函数都真跑一次
+  const SMOKE = {
+    solve: () => E.solve({ targetHex: '#B79764', pigmentIds: ['C1', 'C2', 'C3'] }),
+    solveMixed: () => E.solveMixed({ targetHex: '#B79764', pigmentIds: ['C1', 'C2', 'C3'] }),
+    solveLayered: () => E.solveLayered({ targetHex: '#B79764', pigmentIds: ['C1', 'C2', 'C3'], primer: '#B8B8B6' }),
+    quantizeRecipe: () => E.quantizeRecipe({ targetHex: '#B79764', lines: E.solve({ targetHex: '#B79764', pigmentIds: ['C1', 'C2', 'C3'] }).lines }),
+    nearestPaint: () => E.nearestPaint('#B79764'),
+    nearestPaints: () => E.nearestPaints('#B79764', 3),
+    buildProcess: () => E.buildProcess(E.PROCESSES[0].id),
+    analyzeImage: () => E.analyzeImage([[200, 60, 60], [60, 90, 200], [220, 220, 220]], { k: 2 }),
+    classifyPixels: () => E.classifyPixels([[200, 60, 60], [60, 90, 200]], { centers: [[200, 60, 60], [60, 90, 200]] }),
+    smoothLabels: () => E.smoothLabels([0, 0, 1, 1], 2, 2),
+    growRegion: () => E.growRegion(new Uint8ClampedArray(4 * 4 * 4).fill(200), 4, 4, 1, 1, {}),
+    rectRegion: () => E.rectRegion(new Uint8ClampedArray(4 * 4 * 4).fill(200), 4, 4, 0, 0, 3, 3, {}),
+    shadesOfGray: () => E.shadesOfGray([[200, 180, 160], [120, 110, 100]], 6),
+    wbGain: () => E.wbGain([200, 180, 160]),
+    wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
+    estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    castName: () => E.castName([50, 10, 10]),
+    metalName: () => E.metalName([50, 10, 10]),
+    toneOf: () => E.toneOf([50, 10, 10]),
+    judgeMetallic: () => E.judgeMetallic([70, 0, 0], [40, 5, 5]),
+    analyzeGloss: () => E.analyzeGloss([[200, 200, 200], [40, 40, 40]]),
+    shadeVariants: () => E.shadeVariants('#B79764', { light: 'neutral' }),
+    litColor: () => E.litColor('#B79764', { cct: 5000 }),
+    tintRecipe: () => E.tintRecipe('#B79764', '#8C7452', ['C1', 'C2', 'C3']),
+    deltaE00: () => E.deltaE00([50, 0, 0], [52, 0, 0]),
+    labOfHex: () => E.labOfHex('#B79764'),
+    hexToRgb: () => E.hexToRgb('#B79764'),
+    rgbToHex: () => E.rgbToHex(183, 151, 100),
+    ksOf: () => E.ksOf(new Array(38).fill(0.5)),
+    mixSpectrum: () => E.mixSpectrum([{ ks: new Array(38).fill(0.2) }, { ks: new Array(38).fill(0.6) }], [1, 1]),
+    measure: () => E.measure(new Array(38).fill(0.5)),
+    setLib: () => { E.setLib(require('./spectral.js')); return true; }
+  };
+
+  let ran = 0, broke = [];
+  Object.keys(SMOKE).forEach(function (name) {
+    if (typeof E[name] !== 'function') { broke.push(name + '(缺失)'); return; }
+    try {
+      const r = SMOKE[name]();
+      if (r === undefined || r === null) broke.push(name + '(返回空)');
+      else ran++;
+    } catch (e) {
+      broke.push(name + '(' + e.message.slice(0, 24) + ')');
+    }
+  });
+
+  // snapRecipe 依赖完整求解上下文（内部还会读 lines[i].parts 等），只验存在与类型
+  check('每个函数都跑得通', broke.length === 0, ran + ' 个（snapRecipe 仅验类型）· ' + (broke.join(', ') || 'ok'));
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {
