@@ -484,7 +484,7 @@ node test.js
 
 ```
 node test.js     # 引擎逻辑，163 项，纯 Node
-node uitest.js   # 冒烟：11 条，验加载与挂载
+node uitest.js   # 冒烟：15 条，验加载与挂载
 node e2e.js      # 端到端：22 条，真的点功能
 ```
 
@@ -512,7 +512,7 @@ node e2e.js      # 端到端：22 条，真的点功能
 维护者：社团负责人。改动流程：
 
 1. 改内容 → `kb-data.js`；改逻辑 → `app.js` / `engine.js`
-2. `node test.js`（163 项）+ `node uitest.js`（11 条）都要绿
+2. `node test.js`（163 项）+ `node uitest.js`（15 条）都要绿
 3. `git push` → CI 跑测试 → Pages 一分钟内自动更新
 
 发新版时：
