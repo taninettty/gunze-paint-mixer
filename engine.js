@@ -2450,6 +2450,8 @@ var assign = new Array(pts.length).fill(0);
     var metal = !!opts.metal;
     // 珠光：干涉颜料的角色变，角度一变就换色相（我们只有一张图，用"角色位移"近似）
     var pearl = !!opts.pearl;
+    // 风格：physical 按光谱老实算；art 在光谱结果上再加一层美术夸张
+    var style = opts.style === 'art' ? 'art' : 'physical';
 
     // 光源设定：同一块漆，换个光源就是另一种颜色
     var LIGHT = {
@@ -2480,6 +2482,29 @@ var assign = new Array(pts.length).fill(0);
         lab[1] = na;
         lab[2] = nb;
       }
+      // 美术风：不做"按角度转色相"，直接换成画师会用的那个色相
+      //   高光 → 暖黄；阴影 → 紫（暖阴影 → 棕）
+      //   物理上不成立，但 v1.6 的效果就是这样，看着对
+      if (style === 'art') {
+        var baseC = Math.hypot(baseLab[1], baseLab[2]);
+        var baseHue = Math.atan2(baseLab[2], baseLab[1]) * 180 / Math.PI;
+        if (baseHue < 0) baseHue += 360;
+        var hueT;
+        if (dL > 0) {
+          // 高光：只往暖端挪 20°，红还是红、蓝还是蓝
+          var d = ((70 - baseHue + 540) % 360) - 180;
+          hueT = baseHue + (d > 0 ? 1 : -1) * Math.min(Math.abs(d), 20);
+        } else {
+          // 阴影：直接换成画师会用的那个色相（紫/棕），它不是"转"出来的
+          hueT = id === 'sh-warm' ? 45 : 305;
+        }
+        var cT = Math.min(baseC * 1.1, dL > 0 ? 46 : 30);
+        if (cT < 6) cT = dL > 0 ? 6 : 8;
+        var hRad = hueT * Math.PI / 180;
+        lab[1] = cT * Math.cos(hRad);
+        lab[2] = cT * Math.sin(hRad);
+      }
+
       lab[0] = Math.max(4, Math.min(97, baseLab[0] + dL));
       if (o.spec) {
         var k = 1 - o.spec * 3;

@@ -582,6 +582,23 @@ console.log('\n[32] 珠光翻色');
   check('珠光高光会换色相', E.deltaE00(h1.lab, h2.lab) > 2, 'ΔE ' + E.deltaE00(h1.lab, h2.lab).toFixed(1));
 }
 
+console.log('\n[33] 物理风与美术风');
+{
+  var sb = '#B79764';
+  var ph = E.shadeVariants(sb, { light: 'neutral', style: 'physical' });
+  var ar = E.shadeVariants(sb, { light: 'neutral', style: 'art' });
+  var cs = function (v) { return v.filter(function (x) { return x.id === 'sh-cool'; })[0]; };
+  check('美术风的冷阴影更紫', cs(ar).lab[2] < cs(ph).lab[2] - 3,
+    cs(ph).lab[2].toFixed(1) + ' → ' + cs(ar).lab[2].toFixed(1));
+  check('两种风格的冷阴影明显不同', E.deltaE00(cs(ph).lab, cs(ar).lab) > 8,
+    'ΔE ' + E.deltaE00(cs(ph).lab, cs(ar).lab).toFixed(1));
+  var hr = function (v) { return v.filter(function (x) { return x.id === 'hi'; })[0]; };
+  var bluePh = E.shadeVariants('#2E5C9A', { light: 'neutral', style: 'physical' });
+  var blueAr = E.shadeVariants('#2E5C9A', { light: 'neutral', style: 'art' });
+  check('美术风高光更偏红（蓝色基色）', hr(blueAr).lab[1] > hr(bluePh).lab[1],
+    hr(bluePh).lab[1].toFixed(1) + ' → ' + hr(blueAr).lab[1].toFixed(1));
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

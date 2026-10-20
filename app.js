@@ -567,6 +567,14 @@
     list.appendChild(tip);
   }
 
+  function setStyle(style) {
+    state.style = style;
+    [].forEach.call(document.querySelectorAll('.style-opt'), function (b) {
+      b.classList.toggle('active', b.dataset.style === style);
+    });
+    renderShades();
+  }
+
   function setLight(light) {
     state.light = light;
     [].forEach.call(document.querySelectorAll('.light-opt'), function (b) {
@@ -587,7 +595,7 @@
       isPearl = !!(np && np.pigment && np.pigment.kind === 'pearl');
     } catch (err) { isMetal = false; }
 
-    var variants = E.shadeVariants(state.targetHex, { light: state.light || 'neutral', metal: isMetal, pearl: isPearl });
+    var variants = E.shadeVariants(state.targetHex, { light: state.light || 'neutral', metal: isMetal, pearl: isPearl, style: state.style || 'physical' });
     var ids = state.selected.length ? state.selected : E.PIGMENTS.filter(function (p) { return p.mixable; }).slice(0, 6).map(function (p) { return p.code; });
 
     row.innerHTML = '';
