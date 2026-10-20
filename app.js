@@ -2681,19 +2681,37 @@
       $('snrStage').hidden = false;
       $('snrBody').hidden = false;
 
-      $('snrRatio').textContent = rs.regionCount + ' 区';
-      $('snrEffective').textContent = '区域间 : 区域内 = ' +
-        (rs.ratio >= 100 ? Math.round(rs.ratio) : rs.ratio.toFixed(1)) + ' : 1 · ' + rs.db.toFixed(0) + ' dB';
+      // 美术视角：数"视觉信息"，不算 dB
+      var activeColors = rep.layers.reduce(function (n, L) { return n + L.colors.length; }, 0);
+      var accentShare = (rep.layers[2] && rep.layers[2].active) ? rep.layers[2].share : 0;
+
+      var lMin = 101, lMax = -1;
+      merged.forEach(function (c) {
+        var l = c.lab[0];
+        if (l < lMin) lMin = l;
+        if (l > lMax) lMax = l;
+      });
+      var lRange = lMax - lMin;
+
+      $('snrRatio').textContent = activeColors + ' 色';
+      $('snrEffective').textContent = '分区 ' + rs.regionCount + ' 块 · 明度差 ' +
+        Math.round(lRange) + ' · 点缀 ' + Math.round(accentShare * 100) + '%';
+
+      var warns = [];
+      if (activeColors >= 6) warns.push('颜色 ' + activeColors + ' 种，比"主色 + 点缀"多了不少');
+      if (rs.regionCount >= 10) warns.push('分成 ' + rs.regionCount + ' 块，图案偏碎');
+      if (accentShare > 0.2) warns.push('点缀占了 ' + Math.round(accentShare * 100) + '%，已经不算点缀');
+      if (lRange < 25) warns.push('明度只差 ' + Math.round(lRange) + '，远看会糊成一片');
 
       var verdict;
-      if (rs.regionCount <= 1) verdict = '整张图几乎是一整块，没有可分的区域。';
-      else if (rs.db >= 20) verdict = '分区干净：区域之间拉得开，区域内部也匀。';
-      else if (rs.db >= 10) verdict = '分区可见：能分出 ' + rs.regionCount + ' 块，内部略有杂色。';
-      else if (rs.db >= 0) verdict = '分区偏弱：块分得出来，但内部不匀，细节在抢戏。';
-      else verdict = '几乎没有分区：边界和内部噪声混在一起。';
+      if (!warns.length) {
+        verdict = '视觉信息克制：' + activeColors + ' 色、' + rs.regionCount + ' 块，主次分得开。';
+      } else {
+        verdict = '信息偏多：' + warns.join('；') + '。';
+      }
 
-      $('snrVerdict').textContent = verdict + '（颜色分层：' + rep.activeCount + ' 层，' +
-        rep.verdict.replace(/^[^：]*：/, '') + '）';
+      $('snrVerdict').textContent = verdict +
+        '（内部均匀度：区域间/内 = ' + (rs.ratio >= 100 ? Math.round(rs.ratio) : rs.ratio.toFixed(1)) + ' : 1）';
 
       var list = $('snrColors');
       list.innerHTML = '';
