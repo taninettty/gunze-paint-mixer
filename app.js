@@ -2671,47 +2671,73 @@
       var merged = E.mergeSimilar(res.clusters, 6);
       var rep = E.layerReport(merged);
 
-      // 背景判定：只看最外圈那一条边，取出现最多的颜色。
-      // 之前按"边框加权平均"算，几个亮斑挤在角落就能赢过整片幕布，这里换成投票。
-      var frameW = Math.max(4, Math.round(Math.min(w, h) * 0.06));
-      var votes = {};
-      var totalVotes = 0;
+      // 背景判定：只看左上和右上两块。
+      // 一张模型照片，上方两角几乎总是背景；把整圈边都算进来会被底部的主体稀释。
+      function cornerDominant(x0, x1, y0, y1) {
+        var tally = {};
+        var n = 0;
+        for (var y = y0; y < y1; y += 3) {
+          for (var x = x0; x < x1; x += 3) {
+            var idx2 = (y * w + x) * 4;
+            var r0 = last.data[idx2], g0 = last.data[idx2 + 1], b0 = last.data[idx2 + 2];
 
-      function voteAt(x, y) {
-        var idx2 = (y * w + x) * 4;
-        var r0 = last.data[idx2], g0 = last.data[idx2 + 1], b0 = last.data[idx2 + 2];
-
-        var bestC = null, bd2 = Infinity;
-        merged.forEach(function (c) {
-          var cr = E.hexToRgb(c.hex);
-          var dd2 = (r0 - cr.r) * (r0 - cr.r) + (g0 - cr.g) * (g0 - cr.g) + (b0 - cr.b) * (b0 - cr.b);
-          if (dd2 < bd2) { bd2 = dd2; bestC = c.hex; }
+            var bestC = null, bd2 = Infinity;
+            merged.forEach(function (c) {
+              var cr = E.hexToRgb(c.hex);
+              var dd2 = (r0 - cr.r) * (r0 - cr.r) + (g0 - cr.g) * (g0 - cr.g) + (b0 - cr.b) * (b0 - cr.b);
+              if (dd2 < bd2) { bd2 = dd2; bestC = c.hex; }
+            });
+            if (!bestC) continue;
+            tally[bestC] = (tally[bestC] || 0) + 1;
+            n++;
+          }
+        }
+        var top = null, best = 0;
+        Object.keys(tally).forEach(function (hex) {
+          if (tally[hex] > best) { best = tally[hex]; top = hex; }
         });
-        if (!bestC) return;
-        votes[bestC] = (votes[bestC] || 0) + 1;
-        totalVotes++;
+        return top ? { hex: top, share: best / n } : null;
       }
 
-      for (var fy = 0; fy < frameW; fy++) {
-        for (var fx = 0; fx < w; fx += 2) {
-          voteAt(fx, fy);                 // 上
-          voteAt(fx, h - 1 - fy);         // 下
+      var cw = Math.round(w * 0.3), ch = Math.round(h * 0.38);
+      var tl = cornerDominant(0, cw, 0, ch);
+      var tr = cornerDominant(w - cw, w, 0, ch);
+
+      var bgHex = null;
+      if (tl && tr) {
+        var dCorner = E.deltaE00(E.labOfHex(tl.hex), E.labOfHex(tr.hex));
+        if (dCorner < 18) {
+          // 两角一致：取占比更大的那个角落为准
+          bgHex = tl.share >= tr.share ? tl.hex : tr.hex;
+        } else {
+          // 两角不一致：谁占得更满用谁
+          bgHex = tl.share >= tr.share ? tl.hex : tr.hex;
+          if (Math.max(tl.share, tr.share) < 0.45) bgHex = null;
+        }
+      } else {
+        bgHex = (tl && tl.hex) || (tr && tr.hex) || null;
+      }
+
+
+      // 认出背景就改名并排到第一行；认不出就保留按面积的命名
+      if (bgHex) {
+        var bgLayer = rep.layers.filter(function (L) {
+          return L.active && L.colors.some(function (c) { return c.hex === bgHex; });
+        })[0];
+
+        if (bgLayer) {
+          bgLayer.name = '背景层';
+          bgLayer.isBg = true;
+          var othersL = rep.layers.filter(function (L) { return L.active && L !== bgLayer; });
+          var NAMES2 = ['主色层', '点缀层'];
+          othersL.forEach(function (L, k2) { L.name = NAMES2[k2] || ('第 ' + (k2 + 1) + ' 色层'); });
+          rep.layers.sort(function (x, y) {
+            if (x.isBg) return -1;
+            if (y.isBg) return 1;
+            return y.share - x.share;
+          });
         }
       }
-      for (var fx2 = 0; fx2 < frameW; fx2++) {
-        for (var fy2 = 0; fy2 < h; fy2 += 2) {
-          voteAt(fx2, fy2);               // 左
-          voteAt(w - 1 - fx2, fy2);       // 右
-        }
-      }
-
-      var bgHex = null, bgVotes = 0;
-      Object.keys(votes).forEach(function (hex) {
-        if (votes[hex] > bgVotes) { bgVotes = votes[hex]; bgHex = hex; }
-      });
-
-      // 边上过半是同一个颜色，才认它是背景
-      if (!totalVotes || bgVotes / totalVotes < 0.3) bgHex = null;
 
       var activeColors = rep.layers.reduce(function (n, L) { return n + L.colors.length; }, 0);
       var lMin = 101, lMax = -1;
