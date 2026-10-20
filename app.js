@@ -2499,11 +2499,12 @@
     var table = document.createElement('table');
     var thead = document.createElement('thead');
     var trh = document.createElement('tr');
-    ['角色', '占比', '色相', '色温', 'L / C', '相对主色'].forEach(function (label) {
+    ['角色', '目标', '用这支', '加什么', '达到'].forEach(function (label) {
       var th = document.createElement('th');
       th.textContent = label;
       trh.appendChild(th);
     });
+    thead.appendChild(trh);
     table.appendChild(thead);
 
     var tbody = document.createElement('tbody');
@@ -3414,8 +3415,10 @@
       if ($('snrClearRoles')) {
         $('snrClearRoles').addEventListener('click', function () {
           roles = {};
+          excluded = {};
           pickedHex = null;
           $('snrAssign').hidden = true;
+          if ($('snrExcluded')) $('snrExcluded').hidden = true;
           render();
         });
       }
