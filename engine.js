@@ -2446,6 +2446,8 @@ var assign = new Array(pts.length).fill(0);
   function shadeVariants(hex, opts) {
     opts = opts || {};
     var light = opts.light === 'warm' || opts.light === 'cool' ? opts.light : 'neutral';
+    // 金属漆：高光以镜面反射为主（更亮、更白），阴影几乎没有漫反射（更暗）
+    var metal = !!opts.metal;
 
     // 光源设定：同一块漆，换个光源就是另一种颜色
     var LIGHT = {
@@ -2460,7 +2462,13 @@ var assign = new Array(pts.length).fill(0);
     function mk(id, name, note, o) {
       var c = litColor(hex, { cct: o.cct, gain: 1, adapt: o.adapt, spec: 0 });
       var lab = c.lab.slice();
-      lab[0] = Math.max(4, Math.min(97, baseLab[0] + o.dL));
+      var dL = o.dL;
+      if (metal) {
+        dL = dL > 0 ? dL * 1.5 : dL * 1.3;
+        // 镜面反射带走一部分彩度：金属高光更接近"发白的本色"
+        if (dL > 0) { lab[1] *= 0.85; lab[2] *= 0.85; }
+      }
+      lab[0] = Math.max(4, Math.min(97, baseLab[0] + dL));
       if (o.spec) {
         var k = 1 - o.spec * 3;
         lab[1] *= k;

@@ -579,7 +579,13 @@
     var row = $('shadeRow');
     if (!row) return;
 
-    var variants = E.shadeVariants(state.targetHex, { light: state.light || 'neutral' });
+    var isMetal = false;
+    try {
+      var np = E.nearestPaint(state.targetHex);
+      isMetal = !!(np && np.pigment && np.pigment.kind === 'metal');
+    } catch (err) { isMetal = false; }
+
+    var variants = E.shadeVariants(state.targetHex, { light: state.light || 'neutral', metal: isMetal });
     var ids = state.selected.length ? state.selected : E.PIGMENTS.filter(function (p) { return p.mixable; }).slice(0, 6).map(function (p) { return p.code; });
 
     row.innerHTML = '';

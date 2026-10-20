@@ -555,6 +555,23 @@ console.log('\n[30] 光照决定阴影方向');
   });
 }
 
+console.log('\n[31] 金属漆的光影');
+{
+  var mHex = '#B08D57';
+  var solidV = E.shadeVariants(mHex, { light: 'neutral' });
+  var metalV = E.shadeVariants(mHex, { light: 'neutral', metal: true });
+  var hiOf = function (arr) { return arr.filter(function (x) { return x.id === 'hi'; })[0]; };
+  var shOf = function (arr) { return arr.filter(function (x) { return x.id === 'sh'; })[0]; };
+
+  check('金属高光比实色更亮', hiOf(metalV).lab[0] > hiOf(solidV).lab[0] + 1,
+    hiOf(solidV).lab[0].toFixed(0) + ' → ' + hiOf(metalV).lab[0].toFixed(0));
+  check('金属阴影比实色更暗', shOf(metalV).lab[0] < shOf(solidV).lab[0] - 1,
+    shOf(solidV).lab[0].toFixed(0) + ' → ' + shOf(metalV).lab[0].toFixed(0));
+  check('金属明暗跨度更大',
+    (hiOf(metalV).lab[0] - shOf(metalV).lab[0]) > (hiOf(solidV).lab[0] - shOf(solidV).lab[0]),
+    (hiOf(metalV).lab[0] - shOf(metalV).lab[0]).toFixed(0) + ' vs ' + (hiOf(solidV).lab[0] - shOf(solidV).lab[0]).toFixed(0));
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {
