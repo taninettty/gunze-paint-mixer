@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -653,6 +653,15 @@ console.log('\n[34] 导出函数清单');
     wbGain: () => E.wbGain([200, 180, 160]),
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
+    rgb2lab: () => E.rgb2lab(255, 0, 0),
+    colorRegions: () => {
+      var w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+        var o = (y * w + x) * 4;
+        d[o] = x < 20 ? 200 : 40; d[o + 1] = 40; d[o + 2] = x < 20 ? 40 : 200; d[o + 3] = 255;
+      }
+      return E.colorRegions(d, w, h, { tol: 8, minArea: 100 });
+    },
     segmentRegions: () => {
       var w = 32, h = 32, l = new Float32Array(w * h);
       for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) l[y * w + x] = x < 16 ? 0.2 : 0.8;
@@ -893,6 +902,32 @@ console.log('\n[43] 有出处的三个量');
   var w = 40, h = 40, l = new Float32Array(w * h);
   for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) l[y * w + x] = (x > 15 && x < 25 && y > 15 && y < 25) ? 1 : 0;
   check('中心有东西时中心占比 > 1', E.centerBias(l, w, h) > 1, E.centerBias(l, w, h).toFixed(2));
+}
+
+console.log('\n[44] 颜色分区');
+{
+  var W = 60, H = 60;
+  var d = new Uint8ClampedArray(W * H * 4);
+  for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+    var o = (y * W + x) * 4;
+    var c = x < 20 ? [200, 40, 40] : (x < 40 ? [40, 160, 80] : [60, 90, 200]);
+    d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; d[o + 3] = 255;
+  }
+  var r3 = E.colorRegions(d, W, H, { tol: 8, minArea: 100 });
+  check('三种颜色分成三块', r3.regions.length === 3, r3.regions.length + ' 块');
+  check('三块面积覆盖全图', r3.regions.reduce(function (s, x) { return s + x.area; }, 0) === W * H, '全覆盖');
+
+  var d2 = new Uint8ClampedArray(W * H * 4);
+  for (var y2 = 0; y2 < H; y2++) for (var x2 = 0; x2 < W; x2++) {
+    var o2 = (y2 * W + x2) * 4;
+    var v = Math.round(255 * x2 / (W - 1));
+    d2[o2] = v; d2[o2 + 1] = v; d2[o2 + 2] = v; d2[o2 + 3] = 255;
+  }
+  var r4 = E.colorRegions(d2, W, H, { tol: 5, minArea: 40, mergeTol: 4 });
+  check('渐变会被切成多块', r4.regions.length > 3, r4.regions.length + ' 块');
+
+  var lab = E.rgb2lab(255, 0, 0);
+  check('rgb2lab 算得对', Math.abs(lab[0] - 53) < 6 && lab[1] > 60, lab.map(function (v) { return v.toFixed(0); }).join(','));
 }
 
 console.log('\n[22] 性能');

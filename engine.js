@@ -2376,6 +2376,206 @@ var assign = new Array(pts.length).fill(0);
   }
 
   /** 连通域标记（边界像元不参与） */
+  /** sRGB → Lab（D65），给逐像素用，比 labOfHex 快 */
+  function rgb2lab(r, g, b) {
+    function lin(c) {
+      c = c / 255;
+      return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+    var R = lin(r), G = lin(g), B = lin(b);
+
+    var X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+    var Y = (R * 0.2126 + G * 0.7152 + B * 0.0722);
+    var Z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+
+    function f(t) { return t > 0.008856 ? Math.cbrt(t) : (7.787 * t + 16 / 116); }
+    var fx = f(X), fy = f(Y), fz = f(Z);
+
+    return [116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)];
+  }
+
+  /**
+   * 按颜色分区：优先把颜色相近的像素连成一块。
+   *
+   * 和 segmentRegions 的区别：
+   * - 不看亮度梯度，直接比 Lab 色差
+   * - 区域从种子长出来，色差超过容差的邻居不进
+   * - 平滑渐变会被切开（亮度慢慢变，但色差累计超限）
+   */
+  function colorRegions(data, w, h, opts) {
+    opts = opts || {};
+    var tol = opts.tol == null ? 7 : opts.tol;
+    var minArea = opts.minArea == null ? Math.max(60, Math.round(w * h / 300)) : opts.minArea;
+
+    var n = w * h;
+    var labs = new Float32Array(n * 3);
+    for (var i = 0; i < n; i++) {
+      var o = i * 4;
+      var lab = rgb2lab(data[o], data[o + 1], data[o + 2]);
+      labs[i * 3] = lab[0];
+      labs[i * 3 + 1] = lab[1];
+      labs[i * 3 + 2] = lab[2];
+    }
+
+    var labels = new Int32Array(n).fill(-1);
+    var queue = new Int32Array(n);
+    var regions = [];
+
+    for (var seed = 0; seed < n; seed++) {
+      if (labels[seed] >= 0) continue;
+
+      var id = regions.length;
+      var head = 0, tail = 0;
+      queue[tail++] = seed;
+      labels[seed] = id;
+
+      // 区域的平均色，随生长更新
+      var mR = labs[seed * 3], mG = labs[seed * 3 + 1], mB = labs[seed * 3 + 2];
+      var cnt = 1;
+      var minX = w, maxX = -1, minY = h, maxY = -1;
+
+      while (head < tail) {
+        var q = queue[head++];
+        var qx = q % w, qy = (q - qx) / w;
+
+        if (qx < minX) minX = qx;
+        if (qx > maxX) maxX = qx;
+        if (qy < minY) minY = qy;
+        if (qy > maxY) maxY = qy;
+
+        for (var k = 0; k < 4; k++) {
+          var nx = qx + (k === 0 ? -1 : k === 1 ? 1 : 0);
+          var ny = qy + (k === 2 ? -1 : k === 3 ? 1 : 0);
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+
+          var q2 = ny * w + nx;
+          if (labels[q2] >= 0) continue;
+
+          var dL = labs[q2 * 3] - mR;
+          var dA = labs[q2 * 3 + 1] - mG;
+          var dB = labs[q2 * 3 + 2] - mB;
+          if (Math.sqrt(dL * dL + dA * dA + dB * dB) > tol) continue;
+
+          labels[q2] = id;
+          queue[tail++] = q2;
+
+          cnt++;
+          mR += (labs[q2 * 3] - mR) / cnt;
+          mG += (labs[q2 * 3 + 1] - mG) / cnt;
+          mB += (labs[q2 * 3 + 2] - mB) / cnt;
+        }
+      }
+
+      regions.push({
+        id: id,
+        area: cnt,
+        meanL: mR,
+        meanA: mG,
+        meanB: mB,
+        box: [minX, minY, maxX, maxY]
+      });
+    }
+
+    // 合并相邻且颜色相近的区域：一块身体的明暗过渡不该被切成几十块
+    var mergeTol = opts.mergeTol == null ? 11 : opts.mergeTol;
+    var parent = new Int32Array(regions.length);
+    for (var pi = 0; pi < regions.length; pi++) parent[pi] = pi;
+
+    function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+    function union(x, y) {
+      var rx = find(x), ry = find(y);
+      if (rx !== ry) parent[ry] = rx;
+    }
+
+    for (var yy = 0; yy < h; yy++) {
+      for (var xx = 0; xx < w; xx++) {
+        var pp = yy * w + xx;
+        var la = labels[pp];
+        if (la < 0) continue;
+
+        if (xx < w - 1) {
+          var lb = labels[pp + 1];
+          if (lb >= 0 && lb !== la) {
+            var ra = regions[la], rb = regions[lb];
+            var d1 = ra.meanL - rb.meanL, d2 = ra.meanA - rb.meanA, d3 = ra.meanB - rb.meanB;
+            if (Math.min(ra.area, rb.area) < minArea * 4 && Math.sqrt(d1 * d1 + d2 * d2 + d3 * d3) < mergeTol) union(la, lb);
+          }
+        }
+        if (yy < h - 1) {
+          var lc = labels[pp + w];
+          if (lc >= 0 && lc !== la) {
+            var rc = regions[la], rd2 = regions[lc];
+            var e1 = rc.meanL - rd2.meanL, e2 = rc.meanA - rd2.meanA, e3 = rc.meanB - rd2.meanB;
+            if (Math.min(rc.area, rd2.area) < minArea * 4 && Math.sqrt(e1 * e1 + e2 * e2 + e3 * e3) < mergeTol) union(la, lc);
+          }
+        }
+      }
+    }
+
+    // 重编号
+    var relabel = {};
+    var next = 0;
+    for (var qi = 0; qi < n; qi++) {
+      var l0 = labels[qi];
+      if (l0 < 0) continue;
+      var root = find(l0);
+      if (relabel[root] == null) relabel[root] = next++;
+      labels[qi] = relabel[root];
+    }
+
+    var merged2 = [];
+    var sums = {};
+    for (var rj = 0; rj < regions.length; rj++) {
+      var root2 = find(rj);
+      if (!sums[root2]) sums[root2] = { area: 0, l: 0, a2: 0, b2: 0 };
+      var s2 = sums[root2];
+      s2.area += regions[rj].area;
+      s2.l += regions[rj].meanL * regions[rj].area;
+      s2.a2 += regions[rj].meanA * regions[rj].area;
+      s2.b2 += regions[rj].meanB * regions[rj].area;
+    }
+    Object.keys(sums).forEach(function (k) {
+      var v = sums[k];
+      merged2.push({
+        id: relabel[k],
+        area: v.area,
+        meanL: v.l / v.area,
+        meanA: v.a2 / v.area,
+        meanB: v.b2 / v.area
+      });
+    });
+    regions = merged2;
+
+    // 太小的块标成 -2，不参与
+    var drop = [];
+    regions.forEach(function (r) { if (r.area < minArea) drop.push(r.id); });
+    if (drop.length) {
+      var isDrop = {};
+      drop.forEach(function (d) { isDrop[d] = true; });
+      for (var q3 = 0; q3 < n; q3++) if (isDrop[labels[q3]]) labels[q3] = -2;
+    }
+
+    // 边界：标签变化的像素
+    var isEdge = new Uint8Array(n);
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        var idx = y * w + x;
+        var v = labels[idx];
+        if (labels[idx - 1] !== v || labels[idx + 1] !== v ||
+            labels[idx - w] !== v || labels[idx + w] !== v) isEdge[idx] = 1;
+      }
+    }
+
+    return {
+      w: w, h: h,
+      labels: labels,
+      isEdge: isEdge,
+      regions: regions.filter(function (r) { return r.area >= minArea; }),
+      totalRegions: regions.length
+    };
+  }
+
+
   function segmentRegions(luma, w, h, opts) {
     opts = opts || {};
     var minArea = opts.minArea == null ? Math.max(60, Math.round(w * h / 300)) : opts.minArea;
@@ -2899,6 +3099,8 @@ var assign = new Array(pts.length).fill(0);
     mergeSimilar: mergeSimilar,
     freqSnr: freqSnr,
     segmentRegions: segmentRegions,
+    colorRegions: colorRegions,
+    rgb2lab: rgb2lab,
     regionSnr: regionSnr,
     bandSnr: bandSnr,
     colorfulness: colorfulness,

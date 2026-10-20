@@ -2608,16 +2608,11 @@
           dst[i] *= 0.55; dst[i + 1] *= 0.55; dst[i + 2] *= 0.55;
         }
       } else if (mode === 'region') {
-        // 卷积分区：Sobel 找边界 → Otsu 阈值 → 连通域
+        // 颜色分区：优先把颜色相近的像素连成一块（容差 7）
         if (!photo.seg) {
-          var lw = w, lh = h;
-          var luma = new Float32Array(lw * lh);
-          for (var li = 0; li < lw * lh; li++) {
-            var lo = li * 4;
-            luma[li] = (src[lo] * 0.299 + src[lo + 1] * 0.587 + src[lo + 2] * 0.114) / 255;
-          }
-          photo.seg = E.segmentRegions(luma, lw, lh, {
-            minArea: Math.max(80, Math.round(lw * lh / 300))
+          photo.seg = E.colorRegions(photo.baseImageData.data, w, h, {
+            tol: 7,
+            minArea: Math.max(80, Math.round(w * h / 300))
           });
         }
 
