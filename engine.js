@@ -2759,6 +2759,88 @@ var assign = new Array(pts.length).fill(0);
    * 从照片估光源：方向靠梯度卷积，色温靠高光色，软硬靠明暗分布。
    * 单张照片推不出真实仰角和距离，方向是画面里的投影方向。
    */
+  /**
+   * 分区估光：每个区域内部单独做方向直方图。
+   *
+   * 整图一个直方图会把不同朝向的面混在一起；分区之后
+   * "左半边从左边来、右半边从上面来" 才分得开。
+   */
+  function regionLights(data, w, h, seg, opts) {
+    opts = opts || {};
+    var r = opts.radius == null ? 3 : opts.radius;
+    var minArea = opts.minArea == null ? Math.round(w * h / 60) : opts.minArea;
+    var BINS = 24;
+
+    var n = w * h;
+    var luma = new Float32Array(n);
+    for (var i2 = 0; i2 < n; i2++) {
+      var o = i2 * 4;
+      luma[i2] = (data[o] * 0.299 + data[o + 1] * 0.587 + data[o + 2] * 0.114) / 255;
+    }
+    var low = boxBlur(luma, w, h, r);
+
+    var gxArr = new Float32Array(n);
+    var gyArr = new Float32Array(n);
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        var idx = y * w + x;
+        var gx = (low[idx - w + 1] + 2 * low[idx + 1] + low[idx + w + 1]) -
+                 (low[idx - w - 1] + 2 * low[idx - 1] + low[idx + w - 1]);
+        var gy = (low[idx + w - 1] + 2 * low[idx + w] + low[idx + w + 1]) -
+                 (low[idx - w - 1] + 2 * low[idx - w] + low[idx - w + 1]);
+        gxArr[idx] = gx;
+        gyArr[idx] = gy;
+      }
+    }
+
+    var out = [];
+    seg.regions.forEach(function (reg) {
+      if (reg.area < minArea) return;
+
+      var hist = new Float64Array(BINS);
+      var total = 0;
+
+      for (var q = 0; q < n; q++) {
+        if (seg.labels[q] !== reg.id) continue;
+        var gx2 = gxArr[q], gy2 = gyArr[q];
+        var mag = Math.sqrt(gx2 * gx2 + gy2 * gy2);
+        if (mag < 1e-6) continue;
+
+        var deg = Math.atan2(-gy2, gx2) * 180 / Math.PI;
+        if (deg < 0) deg += 360;
+        hist[Math.min(BINS - 1, Math.floor(deg / (360 / BINS)))] += mag;
+        total += mag;
+      }
+
+      if (total < 1e-9) return;
+
+      var best = 0, bestV = -1, sumX = 0, sumY = 0;
+      for (var b = 0; b < BINS; b++) {
+        if (hist[b] > bestV) { bestV = hist[b]; best = b; }
+        var ang = (b + 0.5) * (360 / BINS) * Math.PI / 180;
+        sumX += Math.cos(ang) * hist[b];
+        sumY += Math.sin(ang) * hist[b];
+      }
+
+      var coherence = Math.sqrt(sumX * sumX + sumY * sumY) / total;
+      var azimuth = (best + 0.5) * (360 / BINS);
+
+      out.push({
+        id: reg.id,
+        area: reg.area,
+        share: reg.area / n,
+        azimuth: azimuth,
+        weight: bestV / total,
+        coherence: coherence,
+        meanL: reg.meanL
+      });
+    });
+
+    out.sort(function (a2, b2) { return b2.area - a2.area; });
+    return out;
+  }
+
+
   function lightReport(data, w, h, opts) {
     opts = opts || {};
     var r = opts.radius == null ? 4 : opts.radius;
@@ -3274,6 +3356,7 @@ var assign = new Array(pts.length).fill(0);
     segmentRegions: segmentRegions,
     colorRegions: colorRegions,
     lightReport: lightReport,
+    regionLights: regionLights,
     rgb2lab: rgb2lab,
     regionSnr: regionSnr,
     bandSnr: bandSnr,

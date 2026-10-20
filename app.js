@@ -2846,6 +2846,8 @@
       var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2, edgeWeight: edgeW });
 
       // 光源：方向靠梯度卷积，色温靠高光色，软硬靠明暗分布
+      var segLight = E.colorRegions(last.data, w, h, { tol: 9, minArea: Math.round(w * h / 60) });
+      var regionDirs = E.regionLights(last.data, w, h, segLight, { radius: 3, minArea: Math.round(w * h / 60) });
       var lr = E.lightReport(last.data, w, h, { radius: 4 });
 
 
@@ -3223,6 +3225,28 @@
         }
 
         row('相干度', lr.coherence.toFixed(2) + (lr.coherence < 0.25 ? ' · 方向不明显' : ' · 方向明确'), false);
+        if (regionDirs && regionDirs.length >= 1) {
+          var sep = document.createElement('div');
+          sep.className = 'lr-sep';
+          sep.textContent = '按区域看';
+          box.appendChild(sep);
+
+          regionDirs.slice(0, 3).forEach(function (rd, k) {
+            if (rd.coherence < 0.3) return;
+            var d2 = document.createElement('div');
+            d2.className = 'lr-row';
+            var s1 = document.createElement('span');
+            s1.textContent = '区域 ' + (k + 1);
+            var s2 = document.createElement('b');
+            s2.textContent = dirOf(rd.azimuth) + '（' + Math.round(rd.azimuth) + '°）· ' +
+              Math.round(rd.share * 100) + '%';
+            s2.style.fontWeight = '500';
+            d2.appendChild(s1);
+            d2.appendChild(s2);
+            box.appendChild(d2);
+          });
+        }
+
         row('色温', lr.cct ? Math.round(lr.cct) + 'K · ' + lr.tempLabel : '—');
         row('软硬', lr.hardness + '（对比 ' + lr.contrast.toFixed(2) + '）', false);
 
