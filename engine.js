@@ -2755,6 +2755,111 @@ var assign = new Array(pts.length).fill(0);
    *
    * 返回全局比值和逐块的信噪比图（用来标"哪里高哪里低"）。
    */
+  /**
+   * 从照片估光源：方向靠梯度卷积，色温靠高光色，软硬靠明暗分布。
+   * 单张照片推不出真实仰角和距离，方向是画面里的投影方向。
+   */
+  function lightReport(data, w, h, opts) {
+    opts = opts || {};
+    var r = opts.radius == null ? 4 : opts.radius;
+
+    var n = w * h;
+    var luma = new Float32Array(n);
+    for (var i2 = 0; i2 < n; i2++) {
+      var o = i2 * 4;
+      luma[i2] = (data[o] * 0.299 + data[o + 1] * 0.587 + data[o + 2] * 0.114) / 255;
+    }
+
+    var low = boxBlur(luma, w, h, r);
+
+    var sumX = 0, sumY = 0, sumMag = 0;
+    for (var y = 1; y < h - 1; y++) {
+      for (var x = 1; x < w - 1; x++) {
+        var idx = y * w + x;
+        var tl = low[idx - w - 1], tc = low[idx - w], tr = low[idx - w + 1];
+        var ml = low[idx - 1], mr = low[idx + 1];
+        var bl = low[idx + w - 1], bc = low[idx + w], br = low[idx + w + 1];
+
+        var gx = (tr + 2 * mr + br) - (tl + 2 * ml + bl);
+        var gy = (bl + 2 * bc + br) - (tl + 2 * tc + tr);
+        var mag = Math.sqrt(gx * gx + gy * gy);
+
+        if (mag > 1e-6) {
+          sumX += gx / mag;
+          sumY += gy / mag;
+          sumMag += 1;
+        }
+      }
+    }
+
+    var dirX = sumX, dirY = sumY;   // 梯度指向亮侧 = 光源方位
+    var coherence = sumMag > 0 ? Math.sqrt(dirX * dirX + dirY * dirY) / sumMag : 0;
+
+    var azimuth = Math.atan2(-dirY, dirX) * 180 / Math.PI;
+    if (azimuth < 0) azimuth += 360;
+
+    var sortedL = Array.prototype.slice.call(luma).sort(function (a2, b2) { return a2 - b2; });
+    var p05 = sortedL[Math.floor(n * 0.05)];
+    var p95 = sortedL[Math.floor(n * 0.95)];
+    var contrast = p95 - p05;
+
+    var shadowShare = 0;
+    for (var k = 0; k < n; k++) if (luma[k] <= p05 + 0.02) shadowShare++;
+    shadowShare /= n;
+
+    var sumR = 0, sumG = 0, sumB = 0, cnt = 0;
+    for (var j = 0; j < n; j++) {
+      if (luma[j] < p95) continue;
+      var o2 = j * 4;
+      sumR += data[o2]; sumG += data[o2 + 1]; sumB += data[o2 + 2];
+      cnt++;
+    }
+    if (!cnt) { sumR = sumG = sumB = 255; cnt = 1; }
+    sumR /= cnt; sumG /= cnt; sumB /= cnt;
+
+    var X = 0.4124 * sumR + 0.3576 * sumG + 0.1805 * sumB;
+    var Y = 0.2126 * sumR + 0.7152 * sumG + 0.0722 * sumB;
+    var Z = 0.0193 * sumR + 0.1192 * sumG + 0.9505 * sumB;
+    var ssum = X + Y + Z;
+    var cct = null;
+    if (ssum > 0) {
+      var cx = X / ssum, cy = Y / ssum;
+      var nn = (cx - 0.3320) / (0.1858 - cy);
+      var v = 449 * nn * nn * nn + 3525 * nn * nn + 6823.3 * nn + 5520.33;
+      if (isFinite(v)) cct = Math.max(1500, Math.min(15000, v));
+    }
+
+    var tempLabel = cct == null ? '—'
+      : cct < 3300 ? '很暖' : cct < 4500 ? '偏暖'
+      : cct < 6000 ? '接近中性' : cct < 7500 ? '偏冷' : '很冷';
+
+    var dirLabel;
+    if (azimuth >= 337.5 || azimuth < 22.5) dirLabel = '右';
+    else if (azimuth < 67.5) dirLabel = '右上';
+    else if (azimuth < 112.5) dirLabel = '上';
+    else if (azimuth < 157.5) dirLabel = '左上';
+    else if (azimuth < 202.5) dirLabel = '左';
+    else if (azimuth < 247.5) dirLabel = '左下';
+    else if (azimuth < 292.5) dirLabel = '下';
+    else dirLabel = '右下';
+
+    var hard = contrast > 0.55 ? '硬光' : contrast > 0.35 ? '中等' : '柔光';
+
+    return {
+      azimuth: azimuth,
+      direction: dirLabel,
+      coherence: coherence,
+      contrast: contrast,
+      p05: p05, p95: p95,
+      shadowShare: shadowShare,
+      highlight: [Math.round(sumR), Math.round(sumG), Math.round(sumB)],
+      cct: cct,
+      tempLabel: tempLabel,
+      hardness: hard
+    };
+  }
+
+
   function freqSnr(luma, w, h, opts) {
     opts = opts || {};
     var radius = opts.radius == null ? 4 : opts.radius;
@@ -3118,6 +3223,7 @@ var assign = new Array(pts.length).fill(0);
     freqSnr: freqSnr,
     segmentRegions: segmentRegions,
     colorRegions: colorRegions,
+    lightReport: lightReport,
     rgb2lab: rgb2lab,
     regionSnr: regionSnr,
     bandSnr: bandSnr,

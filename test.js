@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -654,6 +654,15 @@ console.log('\n[34] 导出函数清单');
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
     rgb2lab: () => E.rgb2lab(255, 0, 0),
+    lightReport: () => {
+      var w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+        var o = (y * w + x) * 4;
+        var v = Math.round(255 * (1 - x / w));
+        d[o] = v; d[o + 1] = v; d[o + 2] = v; d[o + 3] = 255;
+      }
+      return E.lightReport(d, w, h, { radius: 3 });
+    },
     colorRegions: () => {
       var w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
       for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
@@ -928,6 +937,29 @@ console.log('\n[44] 颜色分区');
 
   var lab = E.rgb2lab(255, 0, 0);
   check('rgb2lab 算得对', Math.abs(lab[0] - 53) < 6 && lab[1] > 60, lab.map(function (v) { return v.toFixed(0); }).join(','));
+}
+
+console.log('\n[45] 光源估计');
+{
+  var W = 100, H = 100;
+  function mk(fn) {
+    var d = new Uint8ClampedArray(W * H * 4);
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      var o = (y * W + x) * 4;
+      var v = fn(x, y);
+      d[o] = v; d[o + 1] = v; d[o + 2] = v; d[o + 3] = 255;
+    }
+    return d;
+  }
+
+  var left = E.lightReport(mk(function (x) { return 255 * (1 - x / W); }), W, H, { radius: 3 });
+  check('左亮 → 光从左边来', left.direction === '左' && left.coherence > 0.8, left.direction + ' ' + Math.round(left.azimuth) + '°');
+
+  var top = E.lightReport(mk(function (x, y) { return 255 * (1 - y / H); }), W, H, { radius: 3 });
+  check('上亮 → 光从上来', top.direction === '上' && top.coherence > 0.8, top.direction + ' ' + Math.round(top.azimuth) + '°');
+
+  var flat = E.lightReport(mk(function () { return 200; }), W, H, { radius: 3 });
+  check('纯平光 → 相干度接近 0', flat.coherence < 0.1, flat.coherence.toFixed(2));
 }
 
 console.log('\n[22] 性能');

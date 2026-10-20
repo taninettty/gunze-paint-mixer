@@ -2845,6 +2845,10 @@
       var edgeW = Number(($('snrEdge') || {}).value) || 0.5;
       var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2, edgeWeight: edgeW });
 
+      // 光源：方向靠梯度卷积，色温靠高光色，软硬靠明暗分布
+      var lr = E.lightReport(last.data, w, h, { radius: 4 });
+
+
       // 平涂/渲染图检测：大部分像素几乎没有梯度
       var flatCount = 0, flatTotal = 0;
       for (var fy = 0; fy < h; fy += 7) {
@@ -3159,6 +3163,49 @@
           advList.appendChild(li);
         });
       }
+
+      // 光源卡片
+      (function () {
+        var box = $('snrLight');
+        if (!box) return;
+        box.hidden = false;
+        box.innerHTML = '';
+
+        var tt = document.createElement('h5');
+        tt.textContent = '光源判断';
+        box.appendChild(tt);
+
+        var ang = (lr.azimuth - 90) * Math.PI / 180;   // 0°=上，顺时针
+        var dx = Math.cos(ang) * 13, dy = Math.sin(ang) * 13;
+
+        var arrow = document.createElement('div');
+        arrow.className = 'lr-arrow';
+        arrow.innerHTML = '<svg viewBox="0 0 48 48" aria-hidden="true">' +
+          '<circle cx="24" cy="24" r="19" fill="none" stroke="#D9D2C4" stroke-width="1.2"/>' +
+          '<line x1="' + (24 - dx) + '" y1="' + (24 - dy) + '" x2="' + (24 + dx) + '" y2="' + (24 + dy) + '" stroke="#B4530A" stroke-width="2.2" stroke-linecap="round"/>' +
+          '<circle cx="' + (24 + dx) + '" cy="' + (24 + dy) + '" r="3.2" fill="#B4530A"/>' +
+          '</svg>';
+        box.appendChild(arrow);
+
+        function row(label, value, strong) {
+          var d = document.createElement('div');
+          d.className = 'lr-row';
+          var s1 = document.createElement('span');
+          s1.textContent = label;
+          var s2 = document.createElement('b');
+          s2.textContent = value;
+          d.appendChild(s1);
+          d.appendChild(s2);
+          if (!strong) s2.style.fontWeight = '400';
+          box.appendChild(d);
+        }
+
+        row('方向', lr.direction + '（' + Math.round(lr.azimuth) + '°）');
+        row('相干度', lr.coherence.toFixed(2) + (lr.coherence < 0.25 ? ' · 方向不明显' : ' · 方向明确'), false);
+        row('色温', lr.cct ? Math.round(lr.cct) + 'K · ' + lr.tempLabel : '—');
+        row('软硬', lr.hardness + '（对比 ' + lr.contrast.toFixed(2) + '）', false);
+        row('阴影', Math.round(lr.shadowShare * 100) + '%', false);
+      })();
 
       // 复刻清单：把这几块色按明暗排成受光→深阴影
       (function () {
