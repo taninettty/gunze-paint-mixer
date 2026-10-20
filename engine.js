@@ -2273,6 +2273,7 @@ var assign = new Array(pts.length).fill(0);
   function bandSnr(luma, w, h, opts) {
     opts = opts || {};
     var levels = opts.levels == null ? 3 : opts.levels;
+    var edgeWeight = opts.edgeWeight == null ? 0.5 : opts.edgeWeight;
     var r = opts.radius == null ? 2 : opts.radius;
 
     var pyr = [luma];
@@ -2299,9 +2300,10 @@ var assign = new Array(pts.length).fill(0);
     var eCoarse = energy(pyr[levels]);
     var eStructure = eCoarse + eMid;
 
-    var total = eStructure + eTexture;
+    // 边缘权重：细节算多重由它决定，调小 = 更看重形体
+    var total = eStructure + eTexture * edgeWeight;
     var share = total > 1e-12 ? eStructure / total : 0;
-    var db = 10 * Math.log10(Math.max(1e-9, eStructure) / Math.max(1e-9, eTexture));
+    var db = 10 * Math.log10(Math.max(1e-9, eStructure) / Math.max(1e-9, eTexture * edgeWeight));
 
     return {
       share: share,
@@ -2310,7 +2312,8 @@ var assign = new Array(pts.length).fill(0);
       eTexture: eTexture,
       eCoarse: eCoarse,
       eMid: eMid,
-      bandEnergy: bandEnergy
+      bandEnergy: bandEnergy,
+      edgeWeight: edgeWeight
     };
   }
 

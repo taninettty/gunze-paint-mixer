@@ -855,6 +855,21 @@ console.log('\n[41] 频带信噪比');
   check('结构占比在 0~1 之间', ramp.share <= 1 && stripes.share >= 0, ramp.share.toFixed(2) + ' / ' + stripes.share.toFixed(2));
 }
 
+console.log('\n[42] 边缘权重');
+{
+  var W = 200, H = 200;
+  var l = new Float32Array(W * H);
+  for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) l[y * W + x] = (x % 4) < 2 ? 0.3 : 0.7;
+
+  var w1 = E.bandSnr(l, W, H, { levels: 3, radius: 2, edgeWeight: 1 });
+  var w05 = E.bandSnr(l, W, H, { levels: 3, radius: 2, edgeWeight: 0.5 });
+  var w025 = E.bandSnr(l, W, H, { levels: 3, radius: 2, edgeWeight: 0.25 });
+
+  check('边缘权重越小，结构占比越高', w025.share > w05.share && w05.share > w1.share,
+    (w1.share * 100).toFixed(1) + '% → ' + (w05.share * 100).toFixed(1) + '% → ' + (w025.share * 100).toFixed(1) + '%');
+  check('默认权重是 0.5', Math.abs(w05.edgeWeight - 0.5) < 1e-9, String(w05.edgeWeight));
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {

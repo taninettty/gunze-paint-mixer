@@ -2647,7 +2647,8 @@
         luma[li] = (last.data[lp] * 0.299 + last.data[lp + 1] * 0.587 + last.data[lp + 2] * 0.114) / 255;
       }
 
-      var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2 });
+      var edgeW = Number(($('snrEdge') || {}).value) || 0.5;
+      var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2, edgeWeight: edgeW });
 
       // 分区图（只作可视化，不参与打分）
       var seg = E.segmentRegions(luma, w, h, { minArea: Math.max(60, Math.round(w * h / 300)) });
@@ -2734,6 +2735,7 @@
     });
 
     $('snrK').addEventListener('change', render);
+    if ($('snrEdge')) $('snrEdge').addEventListener('change', render);
     if ($('snrBg')) {
       $('snrBg').parentNode.style.display = 'none';   // 分层模式下不需要"忽略背景"
     }

@@ -1268,7 +1268,7 @@
         <h2><i class="num">6</i>信噪比检测<span class="hint">对比能量落在形体还是细节</span></h2>
 
         <p class="snr-lead">
-          把画面拆成固定频带：低频是形体，高频是细节。结构占比越高，远看越立得住；越低，说明刻线、水贴、颗粒在抢戏。
+          把画面拆成固定频带：低频是形体，高频是细节。边缘权重调小 = 更看重形体，细节不计那么重。下方颜色层按面积排，不代表谁是主体。
         </p>
 
         <div class="row snr-controls">
@@ -1278,6 +1278,13 @@
               <option value="4">4 块</option>
               <option value="6" selected>6 块</option>
               <option value="8">8 块</option>
+            </select>
+          </label>
+          <label class="snr-klabel">边缘权重
+            <select id="snrEdge">
+              <option value="1">1.0</option>
+              <option value="0.5" selected>0.5</option>
+              <option value="0.25">0.25</option>
             </select>
           </label>
           <label class="snr-klabel"><input type="checkbox" id="snrBg" checked> 忽略浅色背景</label>
@@ -1336,7 +1343,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v4.0 · 2026-10</span>
+  <span class="ver" id="appVer">v4.1 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1401,11 +1408,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=4.0"></script>
-  <script src="gunze-data.js?v=4.0"></script>
-  <script src="engine-data.js?v=4.0"></script>
-  <script src="engine-light.js?v=4.0"></script>
-<script src="engine.js?v=4.0"></script>
-<script src="app.js?v=4.0"></script>
+<script src="kb-data.js?v=4.1"></script>
+  <script src="gunze-data.js?v=4.1"></script>
+  <script src="engine-data.js?v=4.1"></script>
+  <script src="engine-light.js?v=4.1"></script>
+<script src="engine.js?v=4.1"></script>
+<script src="app.js?v=4.1"></script>
 </body>
 </html>
