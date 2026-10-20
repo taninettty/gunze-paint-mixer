@@ -572,6 +572,16 @@ console.log('\n[31] 金属漆的光影');
     (hiOf(metalV).lab[0] - shOf(metalV).lab[0]).toFixed(0) + ' vs ' + (hiOf(solidV).lab[0] - shOf(solidV).lab[0]).toFixed(0));
 }
 
+console.log('\n[32] 珠光翻色');
+{
+  var pb = '#B08D57';
+  var sV = E.shadeVariants(pb, { light: 'neutral' });
+  var pV = E.shadeVariants(pb, { light: 'neutral', pearl: true });
+  var h1 = sV.filter(function (x) { return x.id === 'hi'; })[0];
+  var h2 = pV.filter(function (x) { return x.id === 'hi'; })[0];
+  check('珠光高光会换色相', E.deltaE00(h1.lab, h2.lab) > 2, 'ΔE ' + E.deltaE00(h1.lab, h2.lab).toFixed(1));
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {
