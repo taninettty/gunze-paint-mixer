@@ -762,6 +762,10 @@
   .layer-item .lrc { color: var(--ink-2); }
   .layer-item .lx { margin-left: auto; border: none; background: none; color: var(--ink-3); cursor: pointer; font-family: inherit; }
   .layer-item .lx:hover { color: var(--bad); }
+  .precise-note {
+    margin: 8px 0 0; padding: 8px 10px; border-radius: 8px;
+    background: #F6F2E8; color: var(--ink-2); font-size: 11px; line-height: 1.6;
+  }
   .snap-row {
     display: flex; align-items: center; gap: 8px;
     margin-top: 14px; padding-top: 12px;
@@ -1096,7 +1100,9 @@
 
       <div class="layer-stack" id="layerStack" hidden></div>
 
-    <div class="snap-row">
+    <p class="precise-note" id="preciseNote" hidden></p>
+
+      <div class="snap-row">
       <span>主料 5% 步进 · 微调按滴</span>
       <em id="snapDe"></em>
     </div>
@@ -1227,7 +1233,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v2.7 · 2026-10</span>
+  <span class="ver" id="appVer">v2.8 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1291,9 +1297,9 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=2.7"></script>
-  <script src="gunze-data.js?v=2.7"></script>
-<script src="engine.js?v=2.7"></script>
-<script src="app.js?v=2.7"></script>
+<script src="kb-data.js?v=2.8"></script>
+  <script src="gunze-data.js?v=2.8"></script>
+<script src="engine.js?v=2.8"></script>
+<script src="app.js?v=2.8"></script>
 </body>
 </html>

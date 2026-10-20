@@ -1094,6 +1094,16 @@
       }
     }
 
+    var pn = $('preciseNote');
+    if (pn) {
+      if (res.deltaE < 1.5) {
+        pn.hidden = false;
+        pn.textContent = 'ΔE ' + res.deltaE.toFixed(2) + ' 是数学结果。实际调色误差约 ±3：吸管最小 0.04 毫升、漆的批次差、喷涂厚度都会吃掉这点差距。';
+      } else {
+        pn.hidden = true;
+      }
+    }
+
     $('note').className = 'note' + (res.missingHue && !(near && near.deltaE < 0.5) ? ' warn' : '');
     $('note').textContent = notes.join(' ');
   }
