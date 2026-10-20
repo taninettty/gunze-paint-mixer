@@ -3200,10 +3200,32 @@
           box.appendChild(d);
         }
 
-        row('方向', lr.direction + '（' + Math.round(lr.azimuth) + '°）');
+        function dirOf(deg) {
+          if (deg >= 337.5 || deg < 22.5) return '右';
+          if (deg < 67.5) return '右上';
+          if (deg < 112.5) return '上';
+          if (deg < 157.5) return '左上';
+          if (deg < 202.5) return '左';
+          if (deg < 247.5) return '左下';
+          if (deg < 292.5) return '下';
+          return '右下';
+        }
+
+        var lobes = (lr.lobes || []).slice(0, 3);
+        if (!lobes.length) {
+          row('方向', '无法判断');
+        } else {
+          lobes.forEach(function (lo, k) {
+            var name = k === 0 ? '主光' : ('补光 ' + k);
+            row(name, dirOf(lo.azimuth) + '（' + Math.round(lo.azimuth) + '°）· ' +
+              Math.round(lo.weight * 100) + '%', k === 0);
+          });
+        }
+
         row('相干度', lr.coherence.toFixed(2) + (lr.coherence < 0.25 ? ' · 方向不明显' : ' · 方向明确'), false);
         row('色温', lr.cct ? Math.round(lr.cct) + 'K · ' + lr.tempLabel : '—');
         row('软硬', lr.hardness + '（对比 ' + lr.contrast.toFixed(2) + '）', false);
+
         row('阴影', Math.round(lr.shadowShare * 100) + '%', false);
       })();
 

@@ -2792,6 +2792,55 @@ var assign = new Array(pts.length).fill(0);
       }
     }
 
+    // 多光源：把梯度方向做成直方图，找几个峰
+    var BINS = 36;                     // 每格 10°
+    var hist = new Float64Array(BINS);
+    for (var hy = 1; hy < h - 1; hy++) {
+      for (var hx = 1; hx < w - 1; hx++) {
+        var hidx = hy * w + hx;
+        var htl = low[hidx - w - 1], htc = low[hidx - w], htr = low[hidx - w + 1];
+        var hml = low[hidx - 1], hmr = low[hidx + 1];
+        var hbl = low[hidx + w - 1], hbc = low[hidx + w], hbr = low[hidx + w + 1];
+
+        var hgx = (htr + 2 * hmr + hbr) - (htl + 2 * hml + hbl);
+        var hgy = (hbl + 2 * hbc + hbr) - (htl + 2 * htc + htr);
+        var hm = Math.sqrt(hgx * hgx + hgy * hgy);
+        if (hm < 1e-6) continue;
+
+        var hdeg = Math.atan2(-hgy, hgx) * 180 / Math.PI;
+        if (hdeg < 0) hdeg += 360;
+        hist[Math.min(BINS - 1, Math.floor(hdeg / (360 / BINS)))] += hm;
+      }
+    }
+
+    // 圆周平滑一次，避免峰太尖
+    var smoothed = new Float64Array(BINS);
+    for (var b2 = 0; b2 < BINS; b2++) {
+      smoothed[b2] = (hist[(b2 + BINS - 1) % BINS] + hist[b2] * 2 + hist[(b2 + 1) % BINS]) / 4;
+    }
+
+    var totalW = 0;
+    for (var b3 = 0; b3 < BINS; b3++) totalW += smoothed[b3];
+
+    var lobes = [];
+    if (totalW > 1e-9) {
+      var maxW = 0;
+      for (var b4 = 0; b4 < BINS; b4++) if (smoothed[b4] > maxW) maxW = smoothed[b4];
+
+      for (var b5 = 0; b5 < BINS; b5++) {
+        var v = smoothed[b5];
+        if (v < maxW * 0.35) continue;                    // 至少是主峰的 35%
+        if (v < smoothed[(b5 + BINS - 1) % BINS] || v <= smoothed[(b5 + 1) % BINS]) continue;  // 只取局部峰
+
+        var deg = b5 * (360 / BINS) + (360 / BINS) / 2;
+        lobes.push({ azimuth: deg, weight: v / totalW });
+      }
+
+      lobes.sort(function (a2, b6) { return b6.weight - a2.weight; });
+      lobes = lobes.slice(0, 3);
+    }
+
+
     var dirX = sumX, dirY = sumY;   // 梯度指向亮侧 = 光源方位
     var coherence = sumMag > 0 ? Math.sqrt(dirX * dirX + dirY * dirY) / sumMag : 0;
 
@@ -2855,7 +2904,8 @@ var assign = new Array(pts.length).fill(0);
       highlight: [Math.round(sumR), Math.round(sumG), Math.round(sumB)],
       cct: cct,
       tempLabel: tempLabel,
-      hardness: hard
+      hardness: hard,
+      lobes: lobes
     };
   }
 

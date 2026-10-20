@@ -960,6 +960,13 @@ console.log('\n[45] 光源估计');
 
   var flat = E.lightReport(mk(function () { return 200; }), W, H, { radius: 3 });
   check('纯平光 → 相干度接近 0', flat.coherence < 0.1, flat.coherence.toFixed(2));
+
+  check('单光源能找出一个峰', left.lobes && left.lobes.length >= 1 && Math.abs(left.lobes[0].azimuth - 180) < 12,
+    left.lobes && left.lobes.length ? Math.round(left.lobes[0].azimuth) + '°' : '无');
+
+  check('峰的权重在 0~1 之间', left.lobes[0].weight > 0 && left.lobes[0].weight <= 1, left.lobes[0].weight.toFixed(2));
+
+  check('纯平光没有峰', flat.lobes.length === 0, flat.lobes.length + ' 个');
 }
 
 console.log('\n[22] 性能');
