@@ -431,6 +431,17 @@
   .ab-svg.pressed .ab-paint { display: inline !important; }
 
   .gl-h { font-size: 12px; margin: 18px 0 8px; color: var(--accent); font-weight: 600; letter-spacing: .04em; }
+  .fl-dl { margin: 0 0 8px; font-size: 12.5px; line-height: 1.75; }
+  .fl-dl dt { color: var(--accent); font-size: 11px; font-weight: 600; margin-top: 10px; letter-spacing: .02em; }
+  .fl-dl dt:first-child { margin-top: 0; }
+  .fl-dl dd { margin: 2px 0 0; color: var(--ink-2); }
+  .fl-dl dd ol, .fl-dl dd ul { margin: 4px 0 0; padding-left: 18px; }
+  .fl-dl dd li { margin-bottom: 3px; }
+  .fl-nav { font-size: 11.5px; color: var(--ink-3); background: #FBF7EE; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; margin: 0 0 16px; line-height: 1.9; }
+  .fl-nav span { display: inline-block; margin-right: 6px; color: var(--accent); font-weight: 600; }
+  .fl-nav span + span { margin-left: 14px; }
+  #flowDetail h4 { margin-top: 26px; padding-top: 14px; border-top: 1px dashed var(--line); }
+  #flowDetail h4:first-of-type { margin-top: 0; border-top: none; padding-top: 0; }
   .gl-ul { margin: 0 0 6px; padding-left: 18px; font-size: 12.5px; line-height: 1.75; color: var(--ink-2); }
   .gl-ul li { margin-bottom: 4px; }
   .gl-ul b { color: var(--ink); }
@@ -1514,7 +1525,8 @@
   <!-- 翻车急救 -->
   <div class="ab-detail" id="artDetail" hidden></div>
 
-  <div class="ab-detail gloss-detail" id="glossaryDetail" hidden></div>
+  <div class="ab-detail flow-detail" id="flowDetail" hidden></div>
+    <div class="ab-detail gloss-detail" id="glossaryDetail" hidden></div>
     <div class="ab-detail about-detail" id="aboutDetail" hidden></div>
     <div class="ab-detail fail-detail" id="failDetail" hidden></div>
 
@@ -1524,7 +1536,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v7.7 · 2026-10</span>
+  <span class="ver" id="appVer">v7.8 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1671,11 +1683,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=7.7"></script>
-  <script src="gunze-data.js?v=7.7"></script>
-  <script src="engine-data.js?v=7.7"></script>
-  <script src="engine-light.js?v=7.7"></script>
-<script src="engine.js?v=7.7"></script>
-<script src="app.js?v=7.7"></script>
+<script src="kb-data.js?v=7.8"></script>
+  <script src="gunze-data.js?v=7.8"></script>
+  <script src="engine-data.js?v=7.8"></script>
+  <script src="engine-light.js?v=7.8"></script>
+<script src="engine.js?v=7.8"></script>
+<script src="app.js?v=7.8"></script>
 </body>
 </html>

@@ -294,6 +294,7 @@
     { id: 'practice', name: '实务' },
     { id: 'art', name: '配色' },
     { id: 'fail', name: '翻车急救' },
+    { id: 'flow', name: '流程' },
     { id: 'gloss', name: '名词' },
     { id: 'about', name: '关于' }
   ];
@@ -316,7 +317,7 @@
       tabs.appendChild(b);
     });
 
-    var VIEW = { gear: 'airbrush', practice: 'spray', art: 'art', fail: 'fail', gloss: 'glossary', about: 'about' };
+    var VIEW = { gear: 'airbrush', practice: 'spray', art: 'art', fail: 'fail', gloss: 'glossary', about: 'about', flow: 'flow' };
     var v = { block: VIEW[kbState.id] || 'airbrush' };
 
     var air = $('airbrush');
@@ -333,6 +334,9 @@
 
     var gd = $('glossaryDetail');
     if (gd) gd.hidden = v.block !== 'glossary';
+
+    var fld = $('flowDetail');
+    if (fld) fld.hidden = v.block !== 'flow';
 
     var abd = $('aboutDetail');
     if (abd) abd.hidden = v.block !== 'about';
@@ -2886,7 +2890,7 @@
   // 把 kb-data.js 里的内容挂进页面（改文案只改那个文件）
   function mountKb() {
     if (typeof KB_DATA === "undefined") return;
-    var map = { airbrush: "airbrush", spray: "sprayDetail", art: "artDetail", fail: "failDetail", glossary: "glossaryDetail", about: "aboutDetail" };
+    var map = { airbrush: "airbrush", spray: "sprayDetail", art: "artDetail", fail: "failDetail", glossary: "glossaryDetail", about: "aboutDetail", flow: "flowDetail" };
     Object.keys(map).forEach(function (k) {
       var el = $(map[k]);
       if (el && KB_DATA[k]) el.innerHTML = KB_DATA[k];

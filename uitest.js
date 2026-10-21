@@ -68,6 +68,7 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message + '
       spray: document.getElementById('sprayDetail').innerHTML.length,
       fail: document.getElementById('failDetail').innerHTML.length,
   glossary: document.getElementById('glossaryDetail').innerHTML.length,
+  flow: document.getElementById('flowDetail').innerHTML.length,
   about: document.getElementById('aboutDetail').innerHTML.length,
       defects: document.querySelectorAll('.fail-grid article').length,
       pigs: document.querySelectorAll('#pigList label').length,
@@ -96,7 +97,7 @@ window.addEventListener('error', function (e) { window.__errs.push(e.message + '
 
     // 逐个页签点一遍：每个都要"刚好一个内容块可见且非空"
     var tabs = document.querySelectorAll('.kb-tab');
-    var DETAILS = ['airbrush', 'sprayDetail', 'artDetail', 'failDetail', 'glossaryDetail', 'aboutDetail'];
+    var DETAILS = ['airbrush', 'sprayDetail', 'artDetail', 'failDetail', 'flowDetail', 'glossaryDetail', 'aboutDetail'];
     var tabReport = [];
 
     for (var t = 0; t < tabs.length; t++) {
@@ -236,6 +237,7 @@ function run() {
   check('实务内容已挂载', r.spray > 1000, r.spray + ' 字符');
   check('翻车急救内容已挂载', r.fail > 1000, r.fail + ' 字符');
   check('名词内容已挂载', r.glossary > 1000, r.glossary + ' 字符');
+  check('流程内容已挂载', r.flow > 5000, r.flow + ' 字符');
   check('关于内容已挂载', r.about > 500, r.about + ' 字符');
   check('八张缺陷卡都在', r.defects === 8, r.defects + ' 张');
   check('漆库渲染了 226 支', r.pigs === 226, r.pigs + ' 支');
@@ -248,7 +250,7 @@ function run() {
   check('三个顶层页都能显示', (r.pages || '').indexOf('hidden') < 0 && (r.pages || '').split(' ').length === 3, r.pages);
   check('风格按钮能切换', r.styleChanged === true && r.styleActive === 'art', (r.styleActive || '') + ' · 变化 ' + String(r.styleChanged));
   check('信噪比页能打开', r.snrShown === true && r.snrInputs === 2, String(r.snrShown) + ' · ' + r.snrInputs + ' 个控件');
-  check('每个页签点开都有内容', (r.tabs || '').indexOf('BAD') < 0 && (r.tabs || '').split(' ').length === 6, r.tabs);
+  check('每个页签点开都有内容', (r.tabs || '').indexOf('BAD') < 0 && (r.tabs || '').split(' ').length === 7, r.tabs);
   check('照片分析弹窗能打开', r.modalOpened === true, String(r.modalOpened));
 
   console.log(`\n  冒烟：${pass} 通过 / ${fail} 失败\n`);
