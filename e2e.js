@@ -249,7 +249,7 @@ function main() {
   check('工序模板 5 个', c.procTabs === 5, c.procTabs + ' 个');
   check('每个模板都有步骤', /^\d+(,\d+){4}$/.test(c.stepCounts || ''), c.stepCounts);
   check('每层可换漆', c.paintSelects >= 2, c.paintSelects + ' 个下拉');
-  check('知识页 5 个页签', c.kbTabs === 5, c.kbTabs + ' 个');
+  check('知识页 6 个页签', c.kbTabs === 6, c.kbTabs + ' 个');
   check('器材卡片齐全', c.airbrushCards >= 14, c.airbrushCards + ' 张');
   check('喷笔/气泵/电磁泵图都在', c.pumpSvgs >= 10, c.pumpSvgs + ' 张图');
   check('实务有 4 个子导航', c.sprayNav === 4, c.sprayNav + ' 个');
