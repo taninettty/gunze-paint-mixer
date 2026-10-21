@@ -1472,7 +1472,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v7.0 · 2026-10</span>
+  <span class="ver" id="appVer">v7.1 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1543,6 +1543,7 @@
         <p>你有两个颜色：<b>想要的颜色</b>和<b>手上有的郡士漆</b>。这个工具告诉你——</p>
         <p class="gm-big">用哪几支、各加多少、调出来差多少。</p>
         <p class="gm-note">不是猜色号，是拿 226 支郡士漆的真实色值算混合结果。</p>
+        <p>站里四块：<b>调色</b>（算配方）、<b>工序</b>（底漆到清漆的顺序）、<b>喷涂知识</b>（稀释/手法/翻车急救）、<b>信噪比</b>（看图和定方向）。</p>
       </section>
 
       <section class="gm-step" data-step="2" hidden>
@@ -1556,6 +1557,29 @@
       </section>
 
       <section class="gm-step" data-step="3" hidden>
+        <h3>照片分析：从一张图反推用漆</h3>
+        <p>调色页左侧的<b>「照片分析」</b>：贴一张模型照片，它会——</p>
+        <ol class="gm-list">
+          <li>把画面拆成几块主色，每块给出最近的郡士漆和 ΔE</li>
+          <li>按明暗排成<b>受光面 / 中间色 / 暗部 / 深阴影</b></li>
+          <li>生成<b>复刻清单</b>：每块从哪支漆出发、加几滴、调完差多少</li>
+        </ol>
+        <p class="gm-note">照片受光线影响，只能看大概。背景里的灯斑也会被当成颜色——先裁掉背景再分析。</p>
+      </section>
+
+      <section class="gm-step" data-step="4" hidden>
+        <h3>信噪比：看结构，也定光</h3>
+        <p>「信噪比」页回答的是<b>这件东西乱不乱、光从哪来</b>：</p>
+        <ul class="gm-list">
+          <li><b>结构占比</b>：对比能量落在形体上还是细节上。低说明刻线、水贴、颗粒在抢戏</li>
+          <li><b>色彩方向</b>：受光面到暗部的色相、色温、明度怎么变——<b>给方向，不给配比</b></li>
+          <li><b>分区图</b>：按颜色自动切成几块，能看清一件东西有几个色阶</li>
+          <li><b>光源</b>：主光方向、色温、软硬，并标出可信度（相干度低就说方向不明显）</li>
+        </ul>
+        <p class="gm-note">这里的数字没有行业标准，只有相对意义：<b>改前和改后比</b>，别拿去和别人比。</p>
+      </section>
+
+      <section class="gm-step" data-step="5" hidden>
         <h3>三个词，先记住</h3>
         <dl class="gm-dl">
           <dt>ΔE（色差）</dt>
@@ -1567,7 +1591,7 @@
         </dl>
       </section>
 
-      <section class="gm-step" data-step="4" hidden>
+      <section class="gm-step" data-step="6" hidden>
         <h3>第一次这么做</h3>
         <ol class="gm-list">
           <li>选一个你手上模型要用的颜色。</li>
@@ -1595,11 +1619,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=7.0"></script>
-  <script src="gunze-data.js?v=7.0"></script>
-  <script src="engine-data.js?v=7.0"></script>
-  <script src="engine-light.js?v=7.0"></script>
-<script src="engine.js?v=7.0"></script>
-<script src="app.js?v=7.0"></script>
+<script src="kb-data.js?v=7.1"></script>
+  <script src="gunze-data.js?v=7.1"></script>
+  <script src="engine-data.js?v=7.1"></script>
+  <script src="engine-light.js?v=7.1"></script>
+<script src="engine.js?v=7.1"></script>
+<script src="app.js?v=7.1"></script>
 </body>
 </html>
