@@ -393,7 +393,7 @@ check('index.html 引入 gunze-data.js', /<script src="gunze-data\.js(\?[^"]*)?"
 check('index.html 引入 engine.js/app.js', /engine\.js/.test(html) && /app\.js/.test(html));
 check('同目录有 spectral.js', fs.existsSync(path.join(__dirname, 'spectral.js')));
 check('知识内容已外置', kbSrc.length > 20000 && kbSrc.indexOf('KB_DATA') >= 0, kbSrc ? Math.round(kbSrc.length / 1024) + ' KB' : '缺失');
-  check('四个知识块都在', kbSrc.indexOf('airbrush:') > 0 && kbSrc.indexOf('spray:') > 0 && kbSrc.indexOf('art:') > 0 && kbSrc.indexOf('fail:') > 0, 'airbrush/spray/art/fail');
+  check('四个知识块都在', kbSrc.indexOf('airbrush:') > 0 && kbSrc.indexOf('spray:') > 0 && kbSrc.indexOf('art:') > 0 && kbSrc.indexOf('fail:') > 0, 'airbrush/spray/art/fail/glossary');
 
 console.log('\n[23] 文档与数据一致');
 const README = fs.readFileSync(path.join(__dirname, "README.md"), "utf8");
