@@ -877,6 +877,60 @@
   // --------------------------------------------------------------
   var procState = { id: 'chrome', overrides: {}, metal: 'C8', clear: 'C47' };
 
+  function renderChain() {
+    var box = $('procChain');
+    if (!box || !E.PROCESS_CHAIN) return;
+
+    box.innerHTML = '';
+    var lastStage = null;
+    var idx = 0;
+
+    E.PROCESS_CHAIN.forEach(function (st) {
+      if (st.stage !== lastStage) {
+        lastStage = st.stage;
+        var g = document.createElement('div');
+        g.className = 'chain-stage';
+        g.textContent = st.stage === '上游' ? '上游 · 喷之前'
+          : st.stage === '中游' ? '中游 · 喷涂' : '下游 · 喷完之后';
+        box.appendChild(g);
+      }
+
+      idx++;
+      var d = document.createElement('details');
+      d.className = 'chain-item';
+
+      var sm = document.createElement('summary');
+      var num = document.createElement('i');
+      num.textContent = String(idx);
+      sm.appendChild(num);
+      sm.appendChild(document.createTextNode(st.name));
+      d.appendChild(sm);
+
+      var body = document.createElement('div');
+      body.className = 'chain-body';
+      var dl = document.createElement('dl');
+
+      function row(k, v, cls) {
+        var dt = document.createElement('dt');
+        dt.textContent = k;
+        var dd = document.createElement('dd');
+        if (cls) dd.className = cls;
+        dd.textContent = v;
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+      }
+
+      row('为什么', st.why);
+      row('怎么做', st.how);
+      row('做到什么程度', '✓ ' + st.done, 'ck');
+      row('常见错', '✕ ' + st.pit, 'no');
+
+      body.appendChild(dl);
+      d.appendChild(body);
+      box.appendChild(d);
+    });
+  }
+
   function renderProcess() {
     var res = E.buildProcess(procState.id, { metal: procState.metal, clear: procState.clear, overrides: procState.overrides });
     if (!res) return;
@@ -951,7 +1005,8 @@
 
       nm.addEventListener('change', function () {
         procState.overrides[i] = nm.value;
-        renderProcess();
+        renderChain();
+    renderProcess();
       });
 
       var role = document.createElement('span');
@@ -3660,6 +3715,7 @@
     buildGunzeList();
     buildPigments();
     bind();
+    renderChain();
     renderProcess();
 
     setTarget(state.targetHex);

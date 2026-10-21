@@ -1117,6 +1117,7 @@ var assign = new Array(pts.length).fill(0);
   var PROCESSES = DATA.PROCESSES;
   var SPRAY_KB = DATA.SPRAY_KB;
   var PROCESS_TIPS = DATA.PROCESS_TIPS;
+var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
   /* PRIMERS 已移到 engine-data.js */
 
   var primerCache = {};
@@ -3462,6 +3463,7 @@ var assign = new Array(pts.length).fill(0);
     solveMixed: solveMixed,
     buildProcess: buildProcess,
     PROCESSES: PROCESSES,
+    PROCESS_CHAIN: PROCESS_CHAIN,
     PROCESS_TIPS: PROCESS_TIPS,
     SPRAY_KB: SPRAY_KB,
     CLEAR_HINTS: CLEAR_HINTS,

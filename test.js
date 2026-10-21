@@ -605,6 +605,7 @@ console.log('\n[34] 导出函数清单');
   const EXPECT = {
     PIGMENTS: 'object', BASE_PAINT: 'object', PRESETS: 'object',
     PROCESSES: 'object', PROCESS_TIPS: 'object', SPRAY_KB: 'object',
+    PROCESS_CHAIN: 'object',
     CLEAR_HINTS: 'object', PRIMERS: 'object',
     DROP_ML: 'number',
 
@@ -1034,6 +1035,23 @@ console.log('\n[47] 明暗分离');
   var r0 = sm.perRegion[0];
   check('三段加起来约 100%', Math.abs((r0.highlight + r0.midtone + r0.shadow) * 100 - 100) < 0.5,
     ((r0.highlight + r0.midtone + r0.shadow) * 100).toFixed(1) + '%');
+}
+
+console.log('\n[48] 全流程上下游');
+{
+  check('链条有 15 步', E.PROCESS_CHAIN.length === 15, E.PROCESS_CHAIN.length + ' 步');
+
+  var stages = {};
+  E.PROCESS_CHAIN.forEach(function (s) { stages[s.stage] = (stages[s.stage] || 0) + 1; });
+  check('上游 6 步', stages['上游'] === 6, String(stages['上游']));
+  check('中游 3 步', stages['中游'] === 3, String(stages['中游']));
+  check('下游 6 步', stages['下游'] === 6, String(stages['下游']));
+
+  var complete = E.PROCESS_CHAIN.filter(function (s) { return s.why && s.how && s.done && s.pit; });
+  check('每步都有为什么/怎么做/判据/常见错', complete.length === 15, complete.length + ' 步完整');
+
+  check('第一步是洗件', E.PROCESS_CHAIN[0].name === '洗件', E.PROCESS_CHAIN[0].name);
+  check('最后一步是组装', E.PROCESS_CHAIN[14].name === '组装', E.PROCESS_CHAIN[14].name);
 }
 
 console.log('\n[22] 性能');

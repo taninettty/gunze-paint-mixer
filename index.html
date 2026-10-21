@@ -939,6 +939,22 @@
   .snap-row.warn em { color: var(--warn); font-weight: 600; }
 
   .panel--process { grid-column: 1 / -1; }
+  .chain-title { font-size: 13px; margin: 4px 0 10px; color: var(--ink); }
+  .chain-title--sub { margin-top: 22px; padding-top: 16px; border-top: 1px dashed var(--line); }
+  .chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; align-items: start; }
+  .chain-stage { grid-column: 1 / -1; font-size: 11px; color: var(--accent); font-weight: 600; letter-spacing: .06em; margin-top: 8px; }
+  .chain-item { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+  .chain-item summary { list-style: none; cursor: pointer; padding: 9px 11px; font-size: 12.5px; display: flex; align-items: center; gap: 7px; color: var(--ink); }
+  .chain-item summary::-webkit-details-marker { display: none; }
+  .chain-item summary i { font-style: normal; font-size: 10px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 1px 6px; flex: none; }
+  .chain-item[open] summary { border-bottom: 1px dashed var(--line); }
+  .chain-body { padding: 9px 11px 11px; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
+  .chain-body dl { margin: 0; }
+  .chain-body dt { color: var(--ink-3); font-size: 10.5px; margin-top: 6px; }
+  .chain-body dt:first-child { margin-top: 0; }
+  .chain-body dd { margin: 1px 0 0; }
+  .chain-body .ck { color: #2E7D4F; }
+  .chain-body .no { color: #8A3B2E; }
   .proc-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
   .proc-tab {
     height: 30px; padding: 0 14px; border-radius: 999px;
@@ -1371,6 +1387,9 @@
   <section class="panel panel--process">
     <h2><i class="num">4</i>工序模板<span class="hint">伪电镀 · 糖果色 · 珠光 · 实色 · 金属</span></h2>
 
+    <h3 class="chain-title">全流程：喷之前做什么，喷完还要做什么</h3>
+    <div class="chain" id="procChain"></div>
+    <h3 class="chain-title chain-title--sub">按技法看层数与配比</h3>
     <div class="proc-tabs" id="procTabs">
       <button type="button" class="proc-tab active" data-proc="chrome">伪电镀</button>
       <button type="button" class="proc-tab" data-proc="candy">糖果色</button>
@@ -1505,7 +1524,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v7.5 · 2026-10</span>
+  <span class="ver" id="appVer">v7.6 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1652,11 +1671,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=7.5"></script>
-  <script src="gunze-data.js?v=7.5"></script>
-  <script src="engine-data.js?v=7.5"></script>
-  <script src="engine-light.js?v=7.5"></script>
-<script src="engine.js?v=7.5"></script>
-<script src="app.js?v=7.5"></script>
+<script src="kb-data.js?v=7.6"></script>
+  <script src="gunze-data.js?v=7.6"></script>
+  <script src="engine-data.js?v=7.6"></script>
+  <script src="engine-light.js?v=7.6"></script>
+<script src="engine.js?v=7.6"></script>
+<script src="app.js?v=7.6"></script>
 </body>
 </html>
