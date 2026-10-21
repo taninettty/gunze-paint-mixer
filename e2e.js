@@ -253,7 +253,7 @@ function main() {
   check('器材卡片齐全', c.airbrushCards >= 14, c.airbrushCards + ' 张');
   check('喷笔/气泵/电磁泵图都在', c.pumpSvgs >= 10, c.pumpSvgs + ' 张图');
   check('实务有 4 个子导航', c.sprayNav === 4, c.sprayNav + ' 个');
-  check('翻车急救 8 张缺陷卡', c.defectCards === 8, c.defectCards + ' 张');
+  check('翻车急救 12 张缺陷卡', c.defectCards === 12, c.defectCards + ' 张');
   check('有正常漆面章节', c.normalSection === true, String(c.normalSection));
   check('照片分析出主色', c.photoRows > 0, c.photoRows + ' 块');
   check('光源条显示', c.lightBar === true, String(c.lightBar));

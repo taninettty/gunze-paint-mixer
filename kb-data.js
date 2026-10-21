@@ -678,9 +678,14 @@ var KB_DATA = {
     `,
 
   spray: `<div class="sd-nav">
+      <button type="button" data-anchor="sd-safety">安全</button>
       <button type="button" data-anchor="sd-thin">稀释</button>
+      <button type="button" data-anchor="sd-thinner">稀释剂</button>
       <button type="button" data-anchor="sd-tech">手法</button>
+      <button type="button" data-anchor="sd-compat">兼容</button>
       <button type="button" data-anchor="sd-env">环境</button>
+      <button type="button" data-anchor="sd-rework">返工</button>
+      <button type="button" data-anchor="sd-store">储存</button>
       <button type="button" data-anchor="sd-care">保养</button>
     </div>
 
@@ -879,7 +884,92 @@ var KB_DATA = {
         <p><b>漆针</b>　针尖弯了、关不严一直滴。</p>
         <p><b>O 圈</b>　漏气、扳机回弹慢、接口渗漆。</p>
       </article>
-    </div>`,
+    </div>
+    <h4 id="sd-safety">安全与防护：这一步不能省</h4>
+    <p class="sd-lead">
+      郡士 C 系是硝基漆，稀释剂含酯类、酮类、醇醚类有机溶剂。这类物质不是「味道大」的问题，
+      而是长期吸入会损伤中枢神经和呼吸系统。喷漆必须在通风条件下做，必须戴合适的口罩。
+    </p>
+    <div class="ab-note">
+      <b>口罩</b>：普通医用口罩、布口罩<b>无效</b>——它们拦不住有机蒸气。要用带<b>有机气体滤盒</b>的防毒面具（如 3M 6000 系列 + 6001 滤盒）。
+      <br><b>通风</b>：抽风机把漆雾排到室外，或至少在通风处作业；密闭房间里戴口罩也不够，因为氧气里的溶剂浓度仍在升高。
+      <br><b>手套</b>：丁腈手套。乳胶会被溶剂溶胀，等于没戴。
+      <br><b>眼睛</b>：护目镜，尤其是洗笔和倒稀释剂时。
+    </div>
+    <p class="sd-lead">
+      <b>废液</b>：洗笔的废稀释剂不要倒下水道。静置后漆渣沉底，上层清液可重复用于洗笔，漆渣按有害垃圾处理。
+      <b>储存</b>：漆和稀释剂远离火源、避免阳光直射，容器拧紧（溶剂挥发会让漆变稠）。
+    </p>
+
+    <h4 id="sd-thinner">稀释剂：黄标、蓝标、缓干，各用在哪</h4>
+    <p class="sd-lead">
+      郡士的稀释剂不止一种，用错会影响流平和干燥速度。
+    </p>
+    <dl class="gl-list">
+      <dt>黄标（Mr.Color Thinner）</dt>
+      <dd>标准稀释剂，干燥速度中等。日常喷涂、补土稀释都用它，最通用。</dd>
+      <dt>蓝标（Mr.Color Leveling Thinner）</dt>
+      <dd>缓干型，挥发慢，漆膜有更多时间流平。适合<b>大面积、光泽面、金属漆</b>——橘皮和干喷会明显减少。代价是干得慢，别在急着下一道时用。</dd>
+      <dt>快干稀释剂</dt>
+      <dd>挥发快，适合小件、快速堆叠，但更容易干喷和橘皮。新手不建议一上来就用。</dd>
+      <dt>水性 / 珐琅稀释剂</dt>
+      <dd>与硝基<b>不通用</b>。水性漆用水或专用稀释剂；珐琅漆用 X-20 类。混用会结块或分层。</dd>
+    </dl>
+    <p class="sd-lead">
+      <b>比例不是标准</b>：同一支漆放久了会变稠，批号之间也有差异。判断依据是「搅拌棒上流下来的样子」——
+      连续细流像牛奶就对了，成条断续说明太稠。
+    </p>
+
+    <h4 id="sd-compat">漆层兼容：谁能盖在谁上面</h4>
+    <p class="sd-lead">
+      叠层的原则只有一条：<b>后喷的漆，溶剂不能溶解先喷的漆</b>。溶剂强度大致是：
+    </p>
+    <div class="ab-note">
+      硝基（郡士 C）&gt; 珐琅（田宫方瓶）&gt; 水性（田宫圆瓶 / 郡士 H）
+    </div>
+    <dl class="gl-list">
+      <dt>硝基上盖硝基</dt>
+      <dd>可以，但底层必须干透。半干时喷第二层，溶剂会把底层「咬」起来起皱（俗称咬底）。</dd>
+      <dt>硝基上盖珐琅 / 水性</dt>
+      <dd>安全。弱溶剂不会溶解已干的硝基膜——这也是为什么渗线、旧化都用珐琅系。</dd>
+      <dt>珐琅 / 水性上盖硝基</dt>
+      <dd><b>危险</b>。硝基溶剂会直接溶解底层，轻则起皱，重则整片浮起。</dd>
+      <dt>底层没干透就叠</dt>
+      <dd>无论哪种组合都会出问题：溶剂被封在下面，后期收缩、龟裂、发白。</dd>
+    </dl>
+    <p class="sd-lead">
+      判据：<b>纸胶带轻贴再撕</b>，胶带上没有漆屑、也没有压痕，才算干透。硝基漆通常需要 12–24 小时。
+    </p>
+
+    <h4 id="sd-rework">返工：喷坏了怎么救</h4>
+    <p class="sd-lead">
+      先判断严重程度，再决定救法。顺序是「能盖就盖、能磨就磨、都不行才剥」。
+    </p>
+    <dl class="gl-list">
+      <dt>第一档：薄盖</dt>
+      <dd>只是发花、颜色不匀、有轻微橘皮。等干透，稀释后薄喷 2 道盖过去。</dd>
+      <dt>第二档：打磨重喷</dt>
+      <dd>流挂、明显橘皮、颗粒。干透后 P800 湿磨打平，P1000 收面，重新喷。</dd>
+      <dt>第三档：剥离</dt>
+      <dd>大面积咬底、龟裂、颜色彻底错。用郡士<span> </span>「Mr.Color 洗漆剂」或专用脱漆剂泡洗；没有的话，异丙醇浸泡 + 旧牙刷也能慢慢刷掉。ABS 件不要用强溶剂长时间泡，会发白变形。</dd>
+      <dt>不要做的</dt>
+      <dd>在没干透的漆上继续喷、用砂纸硬磨流挂（会把周围一起磨穿）、用稀释剂直接擦大面积漆面（会糊成一片）。</dd>
+    </dl>
+
+    <h4 id="sd-store">剩漆怎么存</h4>
+    <p class="sd-lead">
+      调好的漆和开过封的原漆都怕两件事：<b>溶剂挥发</b>和<b>颜料沉降</b>。
+    </p>
+    <dl class="gl-list">
+      <dt>调好的漆</dt>
+      <dd>当天用完最好。要留，装进带盖玻璃瓶（塑料瓶会被溶剂慢慢渗透），拧紧、避光，一般能放 1–2 周；出现结块或胶化就丢掉。</dd>
+      <dt>开过封的原漆</dt>
+      <dd>瓶口擦干净再拧盖（残漆干在螺纹上会导致密封不严），竖放、避光。变稠后可以加稀释剂调回，但反复稀释会改变树脂比例。</dd>
+      <dt>用前必做</dt>
+      <dd>摇匀或搅拌 1 分钟以上。金属漆、消光漆的颜料密度大，静置几天就会沉底——不搅匀直接喷，颜色和光泽都会不匀。</dd>
+    </dl>
+
+  `,
 
   flow: `
     <h4 id="fl-top">全流程详解</h4>
@@ -1414,7 +1504,7 @@ var KB_DATA = {
       <dt>明暗分离</dt>
       <dd>在每块区域内用大核卷积找趋势，再按偏离程度分出高光和阴影。</dd>
     </dl>
-  `,
+`,
 
   fail: `<h4>正常的漆面是怎么形成的</h4>
       <p class="sd-lead">
@@ -1619,6 +1709,70 @@ var KB_DATA = {
           <p><b>处理</b>　整体薄薄补一层。</p>
           <p><b>预防</b>　重叠 1/3，先边角后大面。</p>
         </article>
+
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="54" width="208" height="16" fill="#C89B6A"/>
+            <circle cx="60" cy="62" r="2.4" fill="#8B5E3C"/>
+            <circle cx="92" cy="58" r="2" fill="#8B5E3C"/>
+            <circle cx="128" cy="64" r="2.6" fill="#8B5E3C"/>
+            <circle cx="160" cy="59" r="1.8" fill="#8B5E3C"/>
+            <text x="20" y="26" class="ab-fig-t">针尖大小的小坑</text>
+          </svg>
+          <h5>针孔</h5>
+          <p class="sym"><b>断面</b>　漆膜里有细小的贯穿孔，露出底层。</p>
+          <p><b>长什么样</b>　密密麻麻针尖大的小凹点，侧光看像砂纸。</p>
+          <p><b>原因</b>　底材有油或水；漆太稠、气泡没消；喷太厚，表层先结膜、溶剂从下面顶破。</p>
+          <p><b>处理</b>　干透后 P1000 湿磨，重新薄喷；底材彻底除油除湿。</p>
+          <p><b>预防</b>　调漆后静置消泡、底材干净干燥、薄喷多层。</p>
+        </article>
+
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="56" width="208" height="14" fill="#C89B6A"/>
+            <path d="M40 56 l6 -10 l7 10 M70 56 l5 -8 l6 8 M110 56 l7 -11 l6 11 M150 56 l5 -9 l6 9" fill="none" stroke="#8B5E3C" stroke-width="1.4"/>
+            <text x="20" y="26" class="ab-fig-t">表面裂成网状</text>
+          </svg>
+          <h5>龟裂</h5>
+          <p class="sym"><b>断面</b>　漆膜表层开裂，裂缝呈网状或羽毛状。</p>
+          <p><b>长什么样</b>　细密裂纹，像干涸的泥地。</p>
+          <p><b>原因</b>　底层没干透就叠层，溶剂被封在下面；或厚涂导致表里收缩不一致；弱溶剂面漆盖在强溶剂底漆上也会。</p>
+          <p><b>处理</b>　无法局部修复，只能剥离重喷。</p>
+          <p><b>预防</b>　每层干透（12–24 小时）再叠；强溶剂在下、弱溶剂在上。</p>
+        </article>
+
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="54" width="208" height="16" fill="#C89B6A"/>
+            <rect x="6" y="48" width="208" height="6" fill="#E4E0D6" opacity=".85"/>
+            <text x="20" y="26" class="ab-fig-t">表面浮一层白霜</text>
+          </svg>
+          <h5>粉化 / 起霜</h5>
+          <p class="sym"><b>断面</b>　漆膜表面析出一层粉状或霜状物。</p>
+          <p><b>长什么样</b>　擦一下手上有白粉；消光件尤其明显。</p>
+          <p><b>原因</b>　消光粉加多了或没摇匀；湿度高时溶剂挥发吸热、水汽凝结；长期日晒老化。</p>
+          <p><b>处理</b>　轻微擦掉后罩一层清漆；严重的打磨重喷。</p>
+          <p><b>预防</b>　消光漆用前摇匀、湿度低于 70%、避免暴晒。</p>
+        </article>
+
+        <article>
+          <svg class="defect" viewBox="0 0 220 96" aria-hidden="true">
+            <rect x="6" y="70" width="208" height="18" fill="#DCD5C7"/>
+            <rect x="6" y="54" width="104" height="16" fill="#B4530A"/>
+            <rect x="110" y="54" width="104" height="16" fill="#C97A3E"/>
+            <text x="20" y="26" class="ab-fig-t">同一块漆两边不同色</text>
+          </svg>
+          <h5>褪色 / 变色</h5>
+          <p class="sym"><b>断面</b>　漆膜颜色随时间变浅或偏移。</p>
+          <p><b>长什么样</b>　和刚喷时比明显发黄、发灰或变淡。</p>
+          <p><b>原因</b>　紫外线和氧化；清漆黄变（硝基清漆尤其）；颜料耐光性差异（红色系最敏感）。</p>
+          <p><b>处理</b>　无法还原，只能重喷；展示时避免阳光直射。</p>
+          <p><b>预防</b>　避光存放；耐光性差的颜色用抗 UV 清漆罩面。</p>
+        </article>
+
       </div>
 
           <div class="ab-principle">

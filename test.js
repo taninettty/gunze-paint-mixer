@@ -471,7 +471,7 @@ for (const key of ['airbrush', 'spray', 'art', 'fail']) {
     'div ' + count(body, /<div\b/g) + '/' + count(body, /<\/div>/g) +
     ' · svg ' + count(body, /<svg\b/g) + '/' + count(body, /<\/svg>/g));
 }
-check('翻车急救共 12 张卡（8 缺陷 + 4 正常漆面）', count(secs.fail || '', /<article\b/g) === 12, count(secs.fail || '', /<article\b/g) + ' 张');
+check('翻车急救共 16 张卡（12 缺陷 + 4 正常漆面）', count(secs.fail || '', /<article\b/g) === 16, count(secs.fail || '', /<article\b/g) + ' 张');
 check('内容里没有脚本', !/<script/i.test(kbs), 'clean');
 
 console.log('\n[28] 点缀漆可以来自主料之外');

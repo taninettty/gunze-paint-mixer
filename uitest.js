@@ -239,7 +239,7 @@ function run() {
   check('名词内容已挂载', r.glossary > 1000, r.glossary + ' 字符');
   check('流程内容已挂载', r.flow > 5000, r.flow + ' 字符');
   check('关于内容已挂载', r.about > 500, r.about + ' 字符');
-  check('八张缺陷卡都在', r.defects === 8, r.defects + ' 张');
+  check('十二张缺陷卡都在', r.defects === 12, r.defects + ' 张');
   check('漆库渲染了 226 支', r.pigs === 226, r.pigs + ' 支');
   check('阴影卡渲染了 6 张', r.shades === 6, r.shades + ' 张');
   check('预设渲染了', r.presets > 0, r.presets + ' 个');
