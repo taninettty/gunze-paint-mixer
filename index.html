@@ -434,6 +434,16 @@
   .gl-list { margin: 0; font-size: 12.5px; line-height: 1.75; }
   .gl-list dt { font-weight: 600; color: var(--ink); margin-top: 10px; }
   .gl-list dd { margin: 2px 0 0; color: var(--ink-2); }
+  .site-about { grid-column: 1 / -1; margin: 26px 0 8px; padding: 26px 26px 20px; border-top: 1px solid var(--line); }
+  .sa-inner { max-width: 1000px; }
+  .sa-title { font-size: 15px; margin: 0 0 8px; }
+  .sa-lead { font-size: 13px; line-height: 1.8; color: var(--ink-2); margin: 0 0 16px; max-width: 720px; }
+  .sa-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px 24px; }
+  .sa-grid h3 { font-size: 12px; margin: 0 0 6px; color: var(--accent); font-weight: 600; }
+  .sa-grid ul { margin: 0; padding-left: 16px; font-size: 12px; line-height: 1.75; color: var(--ink-2); }
+  .sa-grid li { margin-bottom: 5px; }
+  .sa-foot { font-size: 11.5px; color: var(--ink-3); margin: 18px 0 0; padding-top: 12px; border-top: 1px dashed var(--line); line-height: 1.7; }
+  .sa-foot code { font-family: ui-monospace, Consolas, monospace; }
   .kb-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 12px; }
   .kb-tab {
     transition: background .12s ease, color .12s ease;
@@ -1462,6 +1472,62 @@
           </p>
         </aside>
 </section>
+
+<footer class="site-about" id="siteAbout">
+  <div class="sa-inner">
+    <h2 class="sa-title">关于这个站</h2>
+
+    <p class="sa-lead">
+      一个给郡士漆用户用的调色台：<b>给一个目标色，算出手上那几支漆各加多少</b>，顺便把喷涂流程、翻车原因和看图的方法放在一起。
+    </p>
+
+    <div class="sa-grid">
+      <section>
+        <h3>它做什么</h3>
+        <ul>
+          <li><b>调色</b>：输入目标色，从 226 支郡士漆里算配方——哪几支、各百分之几、几毫升几滴，并给出调完的色差。</li>
+          <li><b>工序</b>：从洗件、底漆、分色到清漆的顺序，按部就班往下走。</li>
+          <li><b>喷涂知识</b>：稀释、手法、环境、保养，加一份翻车急救和这本名词表。</li>
+          <li><b>信噪比</b>：贴一张图，看结构落在形体还是细节上、明暗怎么分、光从哪来。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>它怎么算</h3>
+        <ul>
+          <li>颜色在 <b>CIELAB</b> 里算，色差用 <b>CIEDE2000</b>——和印刷、涂料行业同一套标准。</li>
+          <li>混色用 <b>Kubelka-Munk 单常数</b>模型，不是把 RGB 直接平均。</li>
+          <li>漆的色值来自屏幕显示的近似值，<b>不是分光仪实测</b>。</li>
+          <li>光照模型考虑色温与明暗适配，但仍是近似。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>它算不准的地方</h3>
+        <ul>
+          <li>屏幕显示的漆色和真实漆膜有差距，<b>整体误差按 ±3 ΔE 看待</b>。</li>
+          <li>照片反推受光线、白平衡、镜头影响，<b>只能看方向，不能当测量</b>。</li>
+          <li>信噪比页的阈值（结构占比、中心占比等）<b>没有行业标准</b>，只适合改前改后自己比。</li>
+          <li>金属、珠光、透明的表现是规则模拟，不是物理仿真。</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>它不做什么</h3>
+        <ul>
+          <li>不卖漆，不放广告，不需要注册。</li>
+          <li>不替你决定"该是什么颜色"——那是美术判断。</li>
+          <li>不生成喷涂方案。技法因人、因件、因漆而异，写死的步骤只会误导。</li>
+        </ul>
+      </section>
+    </div>
+
+    <p class="sa-foot">
+      纯前端实现，无后端、无账号、无追踪。所有计算在你的浏览器里完成，图片不会上传。
+      打开 <code>index.html</code> 即可离线使用。
+    </p>
+  </div>
+</footer>
 </main>
 
   <!-- 5 · 喷涂知识 -->
@@ -1489,7 +1555,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v7.3 · 2026-10</span>
+  <span class="ver" id="appVer">v7.4 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1636,11 +1702,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=7.3"></script>
-  <script src="gunze-data.js?v=7.3"></script>
-  <script src="engine-data.js?v=7.3"></script>
-  <script src="engine-light.js?v=7.3"></script>
-<script src="engine.js?v=7.3"></script>
-<script src="app.js?v=7.3"></script>
+<script src="kb-data.js?v=7.4"></script>
+  <script src="gunze-data.js?v=7.4"></script>
+  <script src="engine-data.js?v=7.4"></script>
+  <script src="engine-light.js?v=7.4"></script>
+<script src="engine.js?v=7.4"></script>
+<script src="app.js?v=7.4"></script>
 </body>
 </html>
