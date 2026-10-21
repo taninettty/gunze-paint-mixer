@@ -2893,6 +2893,37 @@
       img.src = url;
     }
 
+    // 两种叠图：分区色 / 明暗
+    function paintOverlay() {
+      if (!last || !last.seg2 || !last.shade) return;
+      var w2 = last.w, h2 = last.h;
+      var octx2 = $('snrOverlay').getContext('2d');
+      octx2.clearRect(0, 0, w2, h2);
+      var img = octx2.createImageData(w2, h2);
+      var d2 = img.data;
+
+      var segA = last.seg2, smA = last.shade;
+
+      for (var p2 = 0; p2 < w2 * h2; p2++) {
+        var o = p2 * 4;
+
+        if (shadeMode === 'shade') {
+          var kd = smA.kind[p2];
+          if (kd === 2) { d2[o] = 255; d2[o + 1] = 236; d2[o + 2] = 190; d2[o + 3] = 120; }        // 高光
+          else if (kd === 0) { d2[o] = 96; d2[o + 1] = 118; d2[o + 2] = 168; d2[o + 3] = 120; }   // 阴影
+          else { d2[o + 3] = 0; }                                                                   // 中间调
+          continue;
+        }
+
+        if (segA.isEdge[p2]) { d2[o] = 46; d2[o + 1] = 44; d2[o + 2] = 40; d2[o + 3] = 130; continue; }
+        if (segA.labels[p2] < 0) { d2[o + 3] = 0; continue; }
+        var rgb = hslToRgb(((segA.labels[p2] * 137.508) % 360) / 360, 0.55, 0.58);
+        d2[o] = rgb[0]; d2[o + 1] = rgb[1]; d2[o + 2] = rgb[2]; d2[o + 3] = 70;
+      }
+
+      octx2.putImageData(img, 0, 0);
+    }
+
     function render() {
       if (!last) return;
 
@@ -2939,21 +2970,14 @@
       var cbi = E.centerBias(luma, w, h);
 
 
-      // 分区图（只作可视化，不参与打分）
-      var seg = E.segmentRegions(luma, w, h, { minArea: Math.max(60, Math.round(w * h / 300)) });
-      var octx = $('snrOverlay').getContext('2d');
-      octx.clearRect(0, 0, w, h);
-      var imgData = octx.createImageData(w, h);
-      var dd = imgData.data;
-      for (var pi = 0; pi < w * h; pi++) {
-        var lab = seg.labels[pi];
-        var o = pi * 4;
-        if (seg.isEdge[pi]) { dd[o] = 46; dd[o + 1] = 44; dd[o + 2] = 40; dd[o + 3] = 130; continue; }
-        if (lab < 0) { dd[o + 3] = 0; continue; }
-        var rgb = hslToRgb(((lab * 137.508) % 360) / 360, 0.55, 0.58);
-        dd[o] = rgb[0]; dd[o + 1] = rgb[1]; dd[o + 2] = rgb[2]; dd[o + 3] = 70;
-      }
-      octx.putImageData(imgData, 0, 0);
+      // 正常卷积分类 + 强卷积分高光阴影
+      var seg2 = E.colorRegions(last.data, w, h, { tol: 9, minArea: Math.round(w * h / 300) });
+      var sm = E.shadeMap(last.data, w, h, seg2, { gain: 2.2, k: 0.75 });
+
+      last.seg2 = seg2;
+      last.shade = sm;
+      paintOverlay();
+
 
       // 颜色分层（参考信息）
       var res = E.analyzeImage(last.samples, { k: k });
@@ -3509,6 +3533,7 @@
     var pickedHex = null;
     var roles = {};          // hex -> 'bg' | 'main' | 'accent'
     var excluded = {};       // hex -> true，从复刻清单里剔除
+    var shadeMode = 'region';  // 'region' 分区 / 'shade' 明暗
 
     function pickAt(ev) {
       if (!last || !last.merged) return;
@@ -3587,6 +3612,17 @@
     });
 
     bindAssign();
+
+    [].forEach.call(document.querySelectorAll('.ov-btn'), function (b) {
+      b.addEventListener('click', function () {
+        shadeMode = b.dataset.ov;
+        [].forEach.call(document.querySelectorAll('.ov-btn'), function (x) {
+          x.classList.toggle('on', x === b);
+        });
+        paintOverlay();
+      });
+    });
+
     $('snrK').addEventListener('change', render);
     if ($('snrEdge')) $('snrEdge').addEventListener('change', render);
     if ($('snrBg')) {

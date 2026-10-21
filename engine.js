@@ -2765,6 +2765,83 @@ var assign = new Array(pts.length).fill(0);
    * 整图一个直方图会把不同朝向的面混在一起；分区之后
    * "左半边从左边来、右半边从上面来" 才分得开。
    */
+  /**
+   * 明暗分离：在已分好的区域内部，用大核卷积做局部对比，
+   * 把每块再切成高光 / 中间调 / 阴影。
+   *
+   * 大核（radius 默认图短边的 1/18）算的是"这块的趋势"，
+   * 原图减去趋势就是局部对比，放大后能看出哪亮哪暗。
+   */
+  function shadeMap(data, w, h, seg, opts) {
+    opts = opts || {};
+    var gain = opts.gain == null ? 2.2 : opts.gain;
+    var k = opts.k == null ? 0.75 : opts.k;
+
+    var n = w * h;
+    var luma = new Float32Array(n);
+    for (var i2 = 0; i2 < n; i2++) {
+      var o = i2 * 4;
+      luma[i2] = (data[o] * 0.299 + data[o + 1] * 0.587 + data[o + 2] * 0.114) / 255;
+    }
+
+    var radius = opts.radius == null ? Math.max(6, Math.round(Math.min(w, h) / 18)) : opts.radius;
+    var low = boxBlur(luma, w, h, radius);
+
+    var detail = new Float32Array(n);
+    for (var i3 = 0; i3 < n; i3++) {
+      detail[i3] = (luma[i3] - low[i3]) * gain;   // 放大局部对比
+    }
+
+    var kind = new Int8Array(n).fill(-1);          // 0 阴影 / 1 中间 / 2 高光
+    var perRegion = [];
+
+    (seg.regions || []).forEach(function (reg) {
+      var sum = 0, sum2 = 0, cnt = 0;
+      for (var q = 0; q < n; q++) {
+        if (seg.labels[q] !== reg.id) continue;
+        var v = low[q];
+        sum += v; sum2 += v * v; cnt++;
+      }
+      if (!cnt) return;
+
+      var mean = sum / cnt;
+      var sd = Math.sqrt(Math.max(0, sum2 / cnt - mean * mean));
+      var hiTh = mean + sd * k;
+      var loTh = mean - sd * k;
+
+      var hi = 0, mid = 0, lo = 0;
+      for (var q2 = 0; q2 < n; q2++) {
+        if (seg.labels[q2] !== reg.id) continue;
+        var v2 = low[q2];
+        if (v2 >= hiTh) { kind[q2] = 2; hi++; }
+        else if (v2 <= loTh) { kind[q2] = 0; lo++; }
+        else { kind[q2] = 1; mid++; }
+      }
+
+      perRegion.push({
+        id: reg.id,
+        area: cnt,
+        share: cnt / n,
+        meanL: mean,
+        sd: sd,
+        highlight: hi / cnt,
+        midtone: mid / cnt,
+        shadow: lo / cnt
+      });
+    });
+
+    perRegion.sort(function (a, b) { return b.area - a.area; });
+
+    return {
+      kind: kind,
+      detail: detail,
+      perRegion: perRegion,
+      radius: radius,
+      gain: gain
+    };
+  }
+
+
   function regionLights(data, w, h, seg, opts) {
     opts = opts || {};
     var r = opts.radius == null ? 3 : opts.radius;
@@ -3357,6 +3434,7 @@ var assign = new Array(pts.length).fill(0);
     colorRegions: colorRegions,
     lightReport: lightReport,
     regionLights: regionLights,
+    shadeMap: shadeMap,
     rgb2lab: rgb2lab,
     regionSnr: regionSnr,
     bandSnr: bandSnr,

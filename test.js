@@ -616,7 +616,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -654,6 +654,16 @@ console.log('\n[34] 导出函数清单');
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
     rgb2lab: () => E.rgb2lab(255, 0, 0),
+    shadeMap: () => {
+      var w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+        var o = (y * w + x) * 4;
+        var v = Math.round(255 * (1 - y / h * 0.8));
+        d[o] = v; d[o + 1] = v; d[o + 2] = v; d[o + 3] = 255;
+      }
+      var seg = E.colorRegions(d, w, h, { tol: 30, minArea: 100 });
+      return E.shadeMap(d, w, h, seg, {});
+    },
     regionLights: () => {
       var w = 60, h = 60, d = new Uint8ClampedArray(w * h * 4);
       for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
@@ -1002,6 +1012,28 @@ console.log('\n[46] 分区方向');
   check('有一块判定为顶光', topRegion.length >= 1, topRegion.length + ' 块');
 
   check('每块都带相干度', rl.every(function (r) { return r.coherence >= 0 && r.coherence <= 1; }), 'ok');
+}
+
+console.log('\n[47] 明暗分离');
+{
+  var W = 80, H = 80;
+  var d = new Uint8ClampedArray(W * H * 4);
+  for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+    var o = (y * W + x) * 4;
+    var v = Math.round(255 * (1 - y / H * 0.8));
+    d[o] = v; d[o + 1] = v; d[o + 2] = v; d[o + 3] = 255;
+  }
+  var seg = E.colorRegions(d, W, H, { tol: 30, minArea: 200 });
+  var sm = E.shadeMap(d, W, H, seg, {});
+
+  check('大核半径随图尺寸走', sm.radius >= 4, 'radius ' + sm.radius);
+
+  var withShade = sm.perRegion.filter(function (r) { return r.highlight > 0 && r.shadow > 0; });
+  check('区域里同时切出高光和阴影', withShade.length >= 1, withShade.length + ' 块');
+
+  var r0 = sm.perRegion[0];
+  check('三段加起来约 100%', Math.abs((r0.highlight + r0.midtone + r0.shadow) * 100 - 100) < 0.5,
+    ((r0.highlight + r0.midtone + r0.shadow) * 100).toFixed(1) + '%');
 }
 
 console.log('\n[22] 性能');

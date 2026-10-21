@@ -660,6 +660,14 @@
   .snr-advice li.top { border-left: 3px solid #B4530A; padding-left: 8px; margin-left: -8px; }
   .snr-advice li.top b { color: #B4530A; }
   .snr-advice .dont { display: block; margin-top: 4px; font-size: 11px; color: #8A3B2E; }
+  .ov-switch { display: inline-flex; gap: 0; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+  .ov-btn {
+    border: none; background: #fff; padding: 0 12px; height: 28px;
+    font-family: inherit; font-size: 12px; color: var(--ink-2); cursor: pointer;
+  }
+  .ov-btn.on { background: var(--ink); color: #fff; }
+  .snr-legend .lg-hi { background: rgba(255,236,190,.85); }
+  .snr-legend .lg-sh { background: rgba(96,118,168,.7); }
   .snr-light { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
   .snr-light h5 { font-size: 11px; margin: 0 0 6px; color: var(--ink-3); font-weight: 600; }
   .snr-light .lr-row { display: flex; align-items: baseline; gap: 6px; font-size: 11px; line-height: 1.8; color: var(--ink-2); }
@@ -1385,6 +1393,10 @@
               <option value="8">8 块</option>
             </select>
           </label>
+          <span class="ov-switch">
+            <button type="button" class="ov-btn on" data-ov="region">分区</button>
+            <button type="button" class="ov-btn" data-ov="shade">明暗</button>
+          </span>
           <label class="snr-klabel">边缘权重
             <select id="snrEdge">
               <option value="1">1.0</option>
@@ -1407,7 +1419,7 @@
               <figcaption>分层</figcaption>
             </figure>
           </div>
-          <p class="snr-legend"><i class="lg-base"></i>背景层　<i class="lg-signal"></i>主色层　<i class="lg-noise"></i>点缀层</p>
+          <p class="snr-legend"><i class="lg-base"></i>背景层　<i class="lg-signal"></i>主色层　<i class="lg-noise"></i>点缀层　<i class="lg-hi"></i>高光　<i class="lg-sh"></i>阴影</p>
         </div>
 
         <p class="snr-empty" id="snrEmpty">还没有选图。建议用一张模型正面照，背景越干净越准。</p>
@@ -1472,7 +1484,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v7.1 · 2026-10</span>
+  <span class="ver" id="appVer">v7.2 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1619,11 +1631,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=7.1"></script>
-  <script src="gunze-data.js?v=7.1"></script>
-  <script src="engine-data.js?v=7.1"></script>
-  <script src="engine-light.js?v=7.1"></script>
-<script src="engine.js?v=7.1"></script>
-<script src="app.js?v=7.1"></script>
+<script src="kb-data.js?v=7.2"></script>
+  <script src="gunze-data.js?v=7.2"></script>
+  <script src="engine-data.js?v=7.2"></script>
+  <script src="engine-light.js?v=7.2"></script>
+<script src="engine.js?v=7.2"></script>
+<script src="app.js?v=7.2"></script>
 </body>
 </html>
