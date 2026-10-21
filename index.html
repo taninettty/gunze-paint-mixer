@@ -1070,6 +1070,39 @@
     padding: 8px 8px 4px; position: sticky; top: 0; background: var(--panel); z-index: 1;
   }
 
+  .nav-help {
+    margin-left: auto; height: 30px; padding: 0 12px; border-radius: 999px;
+    border: 1px dashed var(--line); background: transparent; cursor: pointer;
+    font-family: inherit; font-size: 12px; color: var(--ink-3);
+  }
+  .nav-help:hover { border-color: var(--accent); color: var(--accent); }
+  .guide-card {
+    position: relative;
+    width: min(560px, 100%);
+    height: auto;
+    max-height: calc(100vh - 48px);
+    padding: 26px 26px 16px;
+  }
+  .guide-card .gm-close { position: absolute; top: 12px; right: 12px; }
+  .guide-card .gm-body { overflow-y: auto; }
+  .gm-body { min-height: 168px; }
+  .gm-step h3 { font-size: 17px; margin: 0 0 10px; }
+  .gm-step p { font-size: 13px; line-height: 1.75; color: var(--ink-2); margin: 0 0 8px; }
+  .gm-big { font-size: 15px !important; color: var(--ink) !important; font-weight: 600; margin: 10px 0 12px !important; }
+  .gm-note { font-size: 11.5px !important; color: var(--ink-3) !important; background: #FBF7EE; padding: 8px 10px; border-radius: 8px; }
+  .gm-list { margin: 0 0 10px; padding-left: 18px; font-size: 13px; line-height: 1.8; color: var(--ink-2); }
+  .gm-list b { color: var(--ink); }
+  .gm-dl { margin: 0; font-size: 12.5px; line-height: 1.7; }
+  .gm-dl dt { font-weight: 600; color: var(--ink); margin-top: 8px; }
+  .gm-dl dd { margin: 2px 0 0; color: var(--ink-2); }
+  .gm-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .gm-dots { display: flex; gap: 5px; }
+  .gm-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+  .gm-dots i.on { background: var(--ink); }
+  .gm-btns { display: flex; gap: 8px; }
+  .gm-btns button { height: 30px; padding: 0 14px; border-radius: 999px; font-family: inherit; font-size: 12px; cursor: pointer; }
+  .btn-ghost { border: 1px solid var(--line); background: #fff; color: var(--ink-2); }
+  .btn-solid { border: 1px solid var(--ink); background: var(--ink); color: #fff; }
   .ctx-menu {
     position: fixed; z-index: 200; min-width: 132px;
     background: #fff; border: 1px solid var(--line); border-radius: 9px;
@@ -1151,6 +1184,7 @@
   <button type="button" class="nav-btn" data-page="proc">工序</button>
   <button type="button" class="nav-btn" data-page="kb">喷涂知识</button>
         <button type="button" class="nav-btn" data-page="snr">信噪比</button>
+        <button type="button" class="nav-help" id="guideBtn">新手引导</button>
 </nav>
 
 <div class="guide" id="guide">
@@ -1438,7 +1472,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v6.7 · 2026-10</span>
+  <span class="ver" id="appVer">v7.0 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1498,17 +1532,74 @@
     </div>
   </div>
 </div>
+
+<div class="modal guide-modal" id="guideModal" hidden>
+  <div class="modal-card guide-card" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+    <button type="button" class="icon-btn gm-close" id="guideModalClose" aria-label="关闭">✕</button>
+
+    <div class="gm-body">
+      <section class="gm-step" data-step="1">
+        <h3 id="guideTitle">这是干什么的</h3>
+        <p>你有两个颜色：<b>想要的颜色</b>和<b>手上有的郡士漆</b>。这个工具告诉你——</p>
+        <p class="gm-big">用哪几支、各加多少、调出来差多少。</p>
+        <p class="gm-note">不是猜色号，是拿 226 支郡士漆的真实色值算混合结果。</p>
+      </section>
+
+      <section class="gm-step" data-step="2" hidden>
+        <h3>三步出配方</h3>
+        <ol class="gm-list">
+          <li><b>选目标色</b>：吸管吸一张图，或直接填色号，或点下面的常用色。</li>
+          <li><b>勾手上有的漆</b>：只勾你确实有的，没勾的不会被算进去。</li>
+          <li><b>看配方</b>：右侧给出毫升和滴数，虚线是要加的量。</li>
+        </ol>
+        <p class="gm-note">第一次建议只勾 3–5 支。勾太多，算出来的配方会难调。</p>
+      </section>
+
+      <section class="gm-step" data-step="3" hidden>
+        <h3>三个词，先记住</h3>
+        <dl class="gm-dl">
+          <dt>ΔE（色差）</dt>
+          <dd>两个颜色差多少。小于 2，肉眼看不出；大于 5，一眼能分辨。<b>别追求 0</b>，2 以内就够。</dd>
+          <dt>稀释</dt>
+          <dd>郡士漆要加稀释剂才能喷。一般 1:1.5 左右；金属漆更稀，清漆更稠。</dd>
+          <dt>光泽</dt>
+          <dd>同一个颜色有光泽、半光、消光三种。买错光泽，颜色对也会看着不对。</dd>
+        </dl>
+      </section>
+
+      <section class="gm-step" data-step="4" hidden>
+        <h3>第一次这么做</h3>
+        <ol class="gm-list">
+          <li>选一个你手上模型要用的颜色。</li>
+          <li>只勾 3 支漆，看能不能调到 ΔE 5 以内。</li>
+          <li>调一小样（2ml），喷在废板上。</li>
+          <li>觉得不对，回来看「当前配方 偏什么」，按提示调整。</li>
+        </ol>
+        <p class="gm-note">别一上来就喷整件。先小样，再上模型——这是省时间，不是省漆。</p>
+      </section>
+    </div>
+
+    <div class="gm-foot">
+      <span class="gm-dots" id="guideDots"></span>
+      <div class="gm-btns">
+        <button type="button" class="btn-ghost" id="guideSkip">跳过</button>
+        <button type="button" class="btn-ghost" id="guidePrev" hidden>上一步</button>
+        <button type="button" class="btn-solid" id="guideNext">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="ctx-menu" id="ctxMenu" hidden></div>
 
 <div class="boot-error" id="bootError" hidden>
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=6.7"></script>
-  <script src="gunze-data.js?v=6.7"></script>
-  <script src="engine-data.js?v=6.7"></script>
-  <script src="engine-light.js?v=6.7"></script>
-<script src="engine.js?v=6.7"></script>
-<script src="app.js?v=6.7"></script>
+<script src="kb-data.js?v=7.0"></script>
+  <script src="gunze-data.js?v=7.0"></script>
+  <script src="engine-data.js?v=7.0"></script>
+  <script src="engine-light.js?v=7.0"></script>
+<script src="engine.js?v=7.0"></script>
+<script src="app.js?v=7.0"></script>
 </body>
 </html>

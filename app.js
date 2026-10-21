@@ -443,6 +443,70 @@
     }
   }
 
+  function initOnboarding() {
+    var modal = $('guideModal');
+    if (!modal) return;
+
+    var steps = [].slice.call(modal.querySelectorAll('.gm-step'));
+    var dots = $('guideDots');
+    var prev = $('guidePrev');
+    var next = $('guideNext');
+    var cur = 0;
+
+    function paint() {
+      steps.forEach(function (s, k) { s.hidden = k !== cur; });
+      if (dots) {
+        dots.innerHTML = '';
+        steps.forEach(function (_, k) {
+          var d = document.createElement('i');
+          if (k === cur) d.className = 'on';
+          dots.appendChild(d);
+        });
+      }
+      if (prev) prev.hidden = cur === 0;
+      if (next) next.textContent = cur === steps.length - 1 ? '开始用' : '下一步';
+    }
+
+    function open() {
+      cur = 0;
+      paint();
+      modal.hidden = false;
+    }
+
+    function close(remember) {
+      modal.hidden = true;
+      if (remember) {
+        try { localStorage.setItem('tint.onboard', 'off'); } catch (e) {}
+      }
+    }
+
+    if (next) next.addEventListener('click', function () {
+      if (cur === steps.length - 1) close(true);
+      else { cur++; paint(); }
+    });
+
+    if (prev) prev.addEventListener('click', function () {
+      if (cur > 0) { cur--; paint(); }
+    });
+
+    if ($('guideSkip')) $('guideSkip').addEventListener('click', function () { close(true); });
+    if ($('guideModalClose')) $('guideModalClose').addEventListener('click', function () { close(true); });
+    if ($('guideBtn')) $('guideBtn').addEventListener('click', open);
+
+    modal.addEventListener('click', function (ev) {
+      if (ev.target === modal) close(true);
+    });
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !modal.hidden) close(true);
+    });
+
+    // 第一次来才自动弹出
+    var seen = false;
+    try { seen = localStorage.getItem('tint.onboard') === 'off'; } catch (e) {}
+    if (!seen) open();
+  }
+
   function updateCount() {
     $('pigCount').textContent = '已选 ' + state.selected.length + ' / ' + MAX_SEL;
   }
@@ -3533,6 +3597,7 @@
   function start() {
     mountKb();
     initGuide();
+    initOnboarding();
     initNav();
     initAirbrush();
     initSprayNav();
