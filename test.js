@@ -617,7 +617,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -655,6 +655,7 @@ console.log('\n[34] 导出函数清单');
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
     rgb2lab: () => E.rgb2lab(255, 0, 0),
+    nthValue: () => E.nthValue(Float32Array.from([5, 1, 4, 2, 3]), 2),
     shadeMap: () => {
       var w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
       for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
@@ -1052,6 +1053,52 @@ console.log('\n[48] 全流程上下游');
 
   check('第一步是洗件', E.PROCESS_CHAIN[0].name === '洗件', E.PROCESS_CHAIN[0].name);
   check('最后一步是组装', E.PROCESS_CHAIN[14].name === '组装', E.PROCESS_CHAIN[14].name);
+}
+
+console.log('\n[49] 快速选择');
+{
+  var arr = Float32Array.from([9, 1, 8, 2, 7, 3, 6, 4, 5, 0]);
+  check('第 0 小是 0', E.nthValue(Float32Array.from(arr), 0) === 0, String(E.nthValue(Float32Array.from(arr), 0)));
+  check('第 9 小是 9', E.nthValue(Float32Array.from(arr), 9) === 9, String(E.nthValue(Float32Array.from(arr), 9)));
+  check('中位数是 4', E.nthValue(Float32Array.from(arr), 4) === 4, String(E.nthValue(Float32Array.from(arr), 4)));
+
+  var big = new Float32Array(10000);
+  for (var i = 0; i < big.length; i++) big[i] = (i * 7919) % 10000;
+  var q = E.nthValue(big, 5000);
+  var sorted = Float32Array.from(big).sort();
+  check('一万个数取中位与排序一致', q === sorted[5000], q + ' vs ' + sorted[5000]);
+}
+
+console.log('\n[50] 性能护栏');
+{
+  var W2 = 400, H2 = 400;
+  var data2 = new Uint8ClampedArray(W2 * H2 * 4);
+  for (var yy = 0; yy < H2; yy++) {
+    for (var xx = 0; xx < W2; xx++) {
+      var o2 = (yy * W2 + xx) * 4;
+      data2[o2] = (xx * 255 / W2) | 0;
+      data2[o2 + 1] = (yy * 255 / H2) | 0;
+      data2[o2 + 2] = 120;
+      data2[o2 + 3] = 255;
+    }
+  }
+
+  var luma2 = new Float32Array(W2 * H2);
+  for (var i4 = 0; i4 < W2 * H2; i4++) {
+    var o3 = i4 * 4;
+    luma2[i4] = (data2[o3] * 0.299 + data2[o3 + 1] * 0.587 + data2[o3 + 2] * 0.114) / 255;
+  }
+
+  var perf0 = Date.now();
+  var seg3 = E.colorRegions(data2, W2, H2, { tol: 9, minArea: Math.round(W2 * H2 / 300) });
+  E.bandSnr(luma2, W2, H2, { levels: 3, radius: 2 });
+  E.shadeMap(data2, W2, H2, seg3, {});
+  E.regionLights(data2, W2, H2, seg3, { radius: 3 });
+  E.lightReport(data2, W2, H2, { radius: 4 });
+  var cost = Date.now() - perf0;
+
+  check('400×400 全流程 < 800ms', cost < 800, cost + ' ms');
+  check('分区能出结果', seg3.regions.length > 0, seg3.regions.length + ' 块');
 }
 
 console.log('\n[22] 性能');

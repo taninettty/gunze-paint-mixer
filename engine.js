@@ -2378,12 +2378,17 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
 
   /** 连通域标记（边界像元不参与） */
   /** sRGB → Lab（D65），给逐像素用，比 labOfHex 快 */
-  function rgb2lab(r, g, b) {
-    function lin(c) {
-      c = c / 255;
-      return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  var SRGB_LIN = (function () {
+    var t = new Float64Array(256);
+    for (var i2 = 0; i2 < 256; i2++) {
+      var c = i2 / 255;
+      t[i2] = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     }
-    var R = lin(r), G = lin(g), B = lin(b);
+    return t;
+  })();
+
+  function rgb2lab(r, g, b) {
+    var R = SRGB_LIN[r | 0], G = SRGB_LIN[g | 0], B = SRGB_LIN[b | 0];
 
     var X = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
     var Y = (R * 0.2126 + G * 0.7152 + B * 0.0722);
@@ -2406,6 +2411,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
   function colorRegions(data, w, h, opts) {
     opts = opts || {};
     var tol = opts.tol == null ? 7 : opts.tol;
+    var tolSq = tol * tol;
     var minArea = opts.minArea == null ? Math.max(60, Math.round(w * h / 300)) : opts.minArea;
 
     var n = w * h;
@@ -2455,7 +2461,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
           var dL = labs[q2 * 3] - mR;
           var dA = labs[q2 * 3 + 1] - mG;
           var dB = labs[q2 * 3 + 2] - mB;
-          if (Math.sqrt(dL * dL + dA * dA + dB * dB) > tol) continue;
+          if (dL * dL + dA * dA + dB * dB > tolSq) continue;
 
           labels[q2] = id;
           queue[tail++] = q2;
@@ -2477,77 +2483,105 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
       });
     }
 
-    // 激进合并：每次拿"最小的区域"，并进它最相近的邻居，直到没有小区域
-    function regionDist(x, y) {
+    // 激进合并：并查集 + 邻接表建一次，合并时只改并查集，不再每次重扫全图
+    var aggressive = opts.mergeTol == null ? 16 : opts.mergeTol;
+    var smallLimit = opts.smallLimit == null ? minArea * 6 : opts.smallLimit;
+
+    var parent = new Int32Array(regions.length);
+    for (var pi = 0; pi < regions.length; pi++) parent[pi] = pi;
+
+    function find(x) {
+      while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+      return x;
+    }
+
+    // 邻接表只建一次
+    var adjSets = new Array(regions.length);
+    for (var ai = 0; ai < regions.length; ai++) adjSets[ai] = new Set();
+
+    for (var yy2 = 0; yy2 < h; yy2++) {
+      for (var xx2 = 0; xx2 < w; xx2++) {
+        var pp = yy2 * w + xx2;
+        var la = labels[pp];
+        if (la < 0) continue;
+        if (xx2 < w - 1) {
+          var lb = labels[pp + 1];
+          if (lb >= 0 && lb !== la) { adjSets[la].add(lb); adjSets[lb].add(la); }
+        }
+        if (yy2 < h - 1) {
+          var lc = labels[pp + w];
+          if (lc >= 0 && lc !== la) { adjSets[la].add(lc); adjSets[lc].add(la); }
+        }
+      }
+    }
+
+    function distOf(x, y) {
       var dx = regions[x].meanL - regions[y].meanL;
       var dy = regions[x].meanA - regions[y].meanA;
       var dz = regions[x].meanB - regions[y].meanB;
       return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
-    function buildAdj() {
-      var adj = {};
-      for (var yy = 0; yy < h; yy++) {
-        for (var xx = 0; xx < w; xx++) {
-          var pp = yy * w + xx;
-          var la = labels[pp];
-          if (la < 0) continue;
-          if (xx < w - 1) {
-            var lb = labels[pp + 1];
-            if (lb >= 0 && lb !== la) { (adj[la] = adj[la] || {})[lb] = 1; (adj[lb] = adj[lb] || {})[la] = 1; }
-          }
-          if (yy < h - 1) {
-            var lc = labels[pp + w];
-            if (lc >= 0 && lc !== la) { (adj[la] = adj[la] || {})[lc] = 1; (adj[lc] = adj[lc] || {})[la] = 1; }
-          }
-        }
-      }
-      return adj;
-    }
-
-    var aggressive = opts.mergeTol == null ? 16 : opts.mergeTol;
-    var smallLimit = opts.smallLimit == null ? minArea * 6 : opts.smallLimit;
     var guard = 0;
-
     while (guard++ < 400) {
-      // 找最小的、还没达标的区域
       var smallest = -1, smallArea = Infinity;
       for (var ri = 0; ri < regions.length; ri++) {
-        if (regions[ri].area <= 0) continue;
-        if (regions[ri].area < smallLimit && regions[ri].area < smallArea) {
-          smallArea = regions[ri].area;
-          smallest = ri;
-        }
+        if (parent[ri] !== ri) continue;
+        var ar = regions[ri].area;
+        if (ar > 0 && ar < smallLimit && ar < smallArea) { smallArea = ar; smallest = ri; }
       }
       if (smallest < 0) break;
 
-      var adj = buildAdj();
-      var nbrs = adj[smallest] || null;
-      if (!nbrs) { regions[smallest].area = 0; continue; }
-
       var best = -1, bestD = Infinity;
-      Object.keys(nbrs).forEach(function (k) {
-        var r2 = parseInt(k, 10);
-        if (regions[r2].area <= 0) return;
-        var d = regionDist(smallest, r2);
-        if (d < bestD) { bestD = d; best = r2; }
+      adjSets[smallest].forEach(function (nb) {
+        if (parent[nb] !== nb || regions[nb].area <= 0) return;
+        var d = distOf(smallest, nb);
+        if (d < bestD) { bestD = d; best = nb; }
       });
 
-      // 阈值放宽，但仍拒绝"颜色差太多"的合并
-      if (best < 0 || bestD > aggressive) { regions[smallest].area *= -1; continue; }
+      if (best < 0 || bestD > aggressive) { regions[smallest].area = -regions[smallest].area; continue; }
 
-      // 合并：把大的并进来，重标该区域所有像素
       var keep = regions[best].area >= regions[smallest].area ? best : smallest;
       var gone = keep === best ? smallest : best;
-      var A = regions[keep].area, B = regions[gone].area;
-      regions[keep].meanL = (regions[keep].meanL * A + regions[gone].meanL * B) / (A + B);
-      regions[keep].meanA = (regions[keep].meanA * A + regions[gone].meanA * B) / (A + B);
-      regions[keep].meanB = (regions[keep].meanB * A + regions[gone].meanB * B) / (A + B);
-      regions[keep].area = A + B;
-      regions[gone].area = 0;
+      var A2 = regions[keep].area, B2 = regions[gone].area;
+      regions[keep].meanL = (regions[keep].meanL * A2 + regions[gone].meanL * B2) / (A2 + B2);
+      regions[keep].meanA = (regions[keep].meanA * A2 + regions[gone].meanA * B2) / (A2 + B2);
+      regions[keep].meanB = (regions[keep].meanB * A2 + regions[gone].meanB * B2) / (A2 + B2);
+      regions[keep].area = A2 + B2;
 
-      for (var qi = 0; qi < n; qi++) if (labels[qi] === gone) labels[qi] = keep;
+      parent[gone] = keep;
+      adjSets[gone].forEach(function (nb) {
+        if (nb !== keep) { adjSets[keep].add(nb); adjSets[nb].add(keep); }
+        adjSets[nb].delete(gone);
+      });
+      adjSets[gone] = null;
+      regions[gone].area = 0;
     }
+
+    // 一次性按并查集重编号
+    var rootMap = new Map();
+    for (var qq = 0; qq < n; qq++) {
+      var l0 = labels[qq];
+      if (l0 < 0) continue;
+      var rt = find(l0);
+      var nid = rootMap.get(rt);
+      if (nid === undefined) { nid = rootMap.size; rootMap.set(rt, nid); }
+      labels[qq] = nid;
+    }
+
+    var remapped = [];
+    rootMap.forEach(function (nid2, rt2) {
+      var rr = regions[rt2];
+      remapped[nid2] = {
+        id: nid2,
+        area: Math.abs(rr.area),
+        meanL: rr.meanL,
+        meanA: rr.meanA,
+        meanB: rr.meanB
+      };
+    });
+    regions = remapped.filter(Boolean);
+
 
     // 重编号
     var relabel = {};
@@ -2794,13 +2828,15 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     }
 
     var kind = new Int8Array(n).fill(-1);          // 0 阴影 / 1 中间 / 2 高光
+    var pixelLists = regionPixelLists(seg, n);
+    var pixelLists = regionPixelLists(seg, n);
     var perRegion = [];
 
     (seg.regions || []).forEach(function (reg) {
+      var pix = pixelLists[reg.id] || [];
       var sum = 0, sum2 = 0, cnt = 0;
-      for (var q = 0; q < n; q++) {
-        if (seg.labels[q] !== reg.id) continue;
-        var v = low[q];
+      for (var q = 0; q < pix.length; q++) {
+        var v = low[pix[q]];
         sum += v; sum2 += v * v; cnt++;
       }
       if (!cnt) return;
@@ -2811,12 +2847,12 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
       var loTh = mean - sd * k;
 
       var hi = 0, mid = 0, lo = 0;
-      for (var q2 = 0; q2 < n; q2++) {
-        if (seg.labels[q2] !== reg.id) continue;
-        var v2 = low[q2];
-        if (v2 >= hiTh) { kind[q2] = 2; hi++; }
-        else if (v2 <= loTh) { kind[q2] = 0; lo++; }
-        else { kind[q2] = 1; mid++; }
+      for (var q2 = 0; q2 < pix.length; q2++) {
+        var qi2 = pix[q2];
+        var v2 = low[qi2];
+        if (v2 >= hiTh) { kind[qi2] = 2; hi++; }
+        else if (v2 <= loTh) { kind[qi2] = 0; lo++; }
+        else { kind[qi2] = 1; mid++; }
       }
 
       perRegion.push({
@@ -2842,6 +2878,21 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     };
   }
 
+
+  /** 每个区域的像素索引表：建一次，按区域遍历只碰自己的像素 */
+  function regionPixelLists(seg, n) {
+    if (seg._pix) return seg._pix;
+
+    var lists = [];
+    for (var i2 = 0; i2 < n; i2++) {
+      var l = seg.labels[i2];
+      if (l < 0) continue;
+      if (!lists[l]) lists[l] = [];
+      lists[l].push(i2);
+    }
+    seg._pix = lists;
+    return lists;
+  }
 
   function regionLights(data, w, h, seg, opts) {
     opts = opts || {};
@@ -2872,14 +2923,16 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     }
 
     var out = [];
+    var pixLists = regionPixelLists(seg, n);
     seg.regions.forEach(function (reg) {
       if (reg.area < minArea) return;
 
       var hist = new Float64Array(BINS);
       var total = 0;
+      var myPix = pixLists[reg.id] || [];
 
-      for (var q = 0; q < n; q++) {
-        if (seg.labels[q] !== reg.id) continue;
+      for (var qi = 0; qi < myPix.length; qi++) {
+        var q = myPix[qi];
         var gx2 = gxArr[q], gy2 = gyArr[q];
         var mag = Math.sqrt(gx2 * gx2 + gy2 * gy2);
         if (mag < 1e-6) continue;
@@ -2919,6 +2972,27 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
   }
 
 
+  /** 第 k 小的值：快速选择，O(n) 平均，不排序整块 */
+  function nthValue(arr, k) {
+    var lo = 0, hi = arr.length - 1;
+    while (lo < hi) {
+      var pivot = arr[(lo + hi) >> 1];
+      var i2 = lo, j = hi;
+      while (i2 <= j) {
+        while (arr[i2] < pivot) i2++;
+        while (arr[j] > pivot) j--;
+        if (i2 <= j) {
+          var t = arr[i2]; arr[i2] = arr[j]; arr[j] = t;
+          i2++; j--;
+        }
+      }
+      if (k <= j) hi = j;
+      else if (k >= i2) lo = i2;
+      else break;
+    }
+    return arr[k];
+  }
+
   function lightReport(data, w, h, opts) {
     opts = opts || {};
     var r = opts.radius == null ? 4 : opts.radius;
@@ -2932,7 +3006,10 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
 
     var low = boxBlur(luma, w, h, r);
 
+    var BINS = 36;
+    var hist = new Float64Array(BINS);
     var sumX = 0, sumY = 0, sumMag = 0;
+
     for (var y = 1; y < h - 1; y++) {
       for (var x = 1; x < w - 1; x++) {
         var idx = y * w + x;
@@ -2943,35 +3020,19 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
         var gx = (tr + 2 * mr + br) - (tl + 2 * ml + bl);
         var gy = (bl + 2 * bc + br) - (tl + 2 * tc + tr);
         var mag = Math.sqrt(gx * gx + gy * gy);
+        if (mag < 1e-6) continue;
 
-        if (mag > 1e-6) {
-          sumX += gx / mag;
-          sumY += gy / mag;
-          sumMag += 1;
-        }
+        sumX += gx / mag;
+        sumY += gy / mag;
+        sumMag += 1;
+
+        var deg0 = Math.atan2(-gy, gx) * 180 / Math.PI;
+        if (deg0 < 0) deg0 += 360;
+        hist[Math.min(BINS - 1, Math.floor(deg0 / (360 / BINS)))] += mag;
       }
     }
 
-    // 多光源：把梯度方向做成直方图，找几个峰
-    var BINS = 36;                     // 每格 10°
-    var hist = new Float64Array(BINS);
-    for (var hy = 1; hy < h - 1; hy++) {
-      for (var hx = 1; hx < w - 1; hx++) {
-        var hidx = hy * w + hx;
-        var htl = low[hidx - w - 1], htc = low[hidx - w], htr = low[hidx - w + 1];
-        var hml = low[hidx - 1], hmr = low[hidx + 1];
-        var hbl = low[hidx + w - 1], hbc = low[hidx + w], hbr = low[hidx + w + 1];
-
-        var hgx = (htr + 2 * hmr + hbr) - (htl + 2 * hml + hbl);
-        var hgy = (hbl + 2 * hbc + hbr) - (htl + 2 * htc + htr);
-        var hm = Math.sqrt(hgx * hgx + hgy * hgy);
-        if (hm < 1e-6) continue;
-
-        var hdeg = Math.atan2(-hgy, hgx) * 180 / Math.PI;
-        if (hdeg < 0) hdeg += 360;
-        hist[Math.min(BINS - 1, Math.floor(hdeg / (360 / BINS)))] += hm;
-      }
-    }
+    // 多光源：直方图已在上面的循环里累加
 
     // 圆周平滑一次，避免峰太尖
     var smoothed = new Float64Array(BINS);
@@ -3007,9 +3068,9 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     var azimuth = Math.atan2(-dirY, dirX) * 180 / Math.PI;
     if (azimuth < 0) azimuth += 360;
 
-    var sortedL = Array.prototype.slice.call(luma).sort(function (a2, b2) { return a2 - b2; });
-    var p05 = sortedL[Math.floor(n * 0.05)];
-    var p95 = sortedL[Math.floor(n * 0.95)];
+    var lumaCopy = Float32Array.from(luma);
+    var p05 = nthValue(lumaCopy, Math.floor(n * 0.05));
+    var p95 = nthValue(lumaCopy, Math.floor(n * 0.95));
     var contrast = p95 - p05;
 
     var shadowShare = 0;
@@ -3435,6 +3496,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     colorRegions: colorRegions,
     lightReport: lightReport,
     regionLights: regionLights,
+    nthValue: nthValue,
     shadeMap: shadeMap,
     rgb2lab: rgb2lab,
     regionSnr: regionSnr,

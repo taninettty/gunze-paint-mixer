@@ -3007,9 +3007,12 @@
       var edgeW = Number(($('snrEdge') || {}).value) || 0.5;
       var bs = E.bandSnr(luma, w, h, { levels: 3, radius: 2, edgeWeight: edgeW });
 
+      // 分区只算一次，下面光源、明暗、复刻都复用它
+      var segOnce = E.colorRegions(last.data, w, h, { tol: 9, minArea: Math.round(w * h / 300) });
+      last.seg2 = segOnce;
+
       // 光源：方向靠梯度卷积，色温靠高光色，软硬靠明暗分布
-      var segLight = E.colorRegions(last.data, w, h, { tol: 9, minArea: Math.round(w * h / 60) });
-      var regionDirs = E.regionLights(last.data, w, h, segLight, { radius: 3, minArea: Math.round(w * h / 60) });
+      var regionDirs = E.regionLights(last.data, w, h, segOnce, { radius: 3, minArea: Math.round(w * h / 60) });
       var lr = E.lightReport(last.data, w, h, { radius: 4 });
 
 
@@ -3037,11 +3040,9 @@
       var cbi = E.centerBias(luma, w, h);
 
 
-      // 正常卷积分类 + 强卷积分高光阴影
-      var seg2 = E.colorRegions(last.data, w, h, { tol: 9, minArea: Math.round(w * h / 300) });
-      var sm = E.shadeMap(last.data, w, h, seg2, { gain: 2.2, k: 0.75 });
-
-      last.seg2 = seg2;
+      // 强卷积分高光阴影（复用上面那一次分区结果）
+      var sm = E.shadeMap(last.data, w, h, segOnce, { gain: 2.2, k: 0.75 });
+      last.seg2 = segOnce;
       last.shade = sm;
       paintOverlay();
 
