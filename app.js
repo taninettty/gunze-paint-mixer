@@ -2625,6 +2625,11 @@
 
     var t = document.createElement('h5');
     t.textContent = '复刻清单 · 按 2ml 配';
+    var chipB = document.createElement('i');
+    chipB.className = 'src src--approx';
+    chipB.textContent = '屏幕近似';
+    chipB.title = '漆色是屏幕显示值，不是分光仪实测';
+    t.appendChild(chipB);
     box.appendChild(t);
 
     var table = document.createElement('table');
@@ -3345,7 +3350,7 @@
           '</svg>';
         box.appendChild(arrow);
 
-        function row(label, value, strong) {
+        function row(label, value, strong, src) {
           var d = document.createElement('div');
           d.className = 'lr-row';
           var s1 = document.createElement('span');
@@ -3354,6 +3359,13 @@
           s2.textContent = value;
           d.appendChild(s1);
           d.appendChild(s2);
+          if (src) {
+            var tag = document.createElement('i');
+            tag.className = 'src src--' + src.kind;
+            tag.textContent = src.text;
+            if (src.tip) tag.title = src.tip;
+            d.appendChild(tag);
+          }
           if (!strong) s2.style.fontWeight = '400';
           box.appendChild(d);
         }
@@ -3376,7 +3388,8 @@
           lobes.forEach(function (lo, k) {
             var name = k === 0 ? '主光' : ('补光 ' + k);
             row(name, dirOf(lo.azimuth) + '（' + Math.round(lo.azimuth) + '°）· ' +
-              Math.round(lo.weight * 100) + '%', k === 0);
+              Math.round(lo.weight * 100) + '%', k === 0,
+              k === 0 ? { kind: 'rough', text: '粗判', tip: '梯度方向直方图的峰，不是三维重建；相干度低时不可信' } : null);
           });
         }
 
@@ -3403,7 +3416,8 @@
           });
         }
 
-        row('色温', lr.cct ? Math.round(lr.cct) + 'K · ' + lr.tempLabel : '—');
+        row('色温', lr.cct ? Math.round(lr.cct) + 'K · ' + lr.tempLabel : '—', false,
+          { kind: 'rough', text: '高光假设', tip: '把最亮 5% 像素当白点反推；高光是白灯或镜面时必然得出 6500K' });
         row('软硬', lr.hardness + '（对比 ' + lr.contrast.toFixed(2) + '）', false);
 
         row('阴影', Math.round(lr.shadowShare * 100) + '%', false);

@@ -950,6 +950,18 @@
   .snap-row.warn em { color: var(--warn); font-weight: 600; }
 
   .panel--process { grid-column: 1 / -1; }
+  .src {
+    display: inline-block; font-style: normal; font-size: 9.5px; line-height: 1.6;
+    padding: 0 5px; border-radius: 999px; border: 1px solid currentColor;
+    vertical-align: 1px; margin-left: 5px; letter-spacing: .02em; white-space: nowrap;
+  }
+  .src--approx { color: #96631A; background: #FBF3E2; }
+  .src--none   { color: var(--ink-3); background: #F6F4EF; }
+  .src--lit    { color: #2F5D8A; background: #EDF3F9; }
+  .src--rough  { color: #6B4A7A; background: #F4EEF7; }
+  .src--photo  { color: #3F6B4A; background: #EDF5EF; }
+  .src-legend { margin: 10px 0 0; font-size: 11px; color: var(--ink-3); line-height: 1.9; }
+  .src-legend .src { margin-right: 4px; }
   .chain-title { font-size: 13px; margin: 4px 0 10px; color: var(--ink); }
   .chain-title--sub { margin-top: 22px; padding-top: 16px; border-top: 1px dashed var(--line); }
   .chain { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; align-items: start; }
@@ -1300,7 +1312,7 @@
       <div class="mix-dir" id="mixDir" hidden></div>
             <div class="de" id="deBox">
         <b id="deValue">—</b>
-        <span>ΔE00</span>
+        <span>ΔE00</span><i class="src src--approx" title="漆色来自屏幕显示值，不是分光仪实测；整体误差按 ±3 ΔE 看待">屏幕近似</i>
         <em id="deLabel"></em>
       </div>
     </div>
@@ -1487,10 +1499,16 @@
 <div class="snr-body" id="snrBody" hidden>
           <div class="snr-score">
             <b id="snrRatio">—</b>
-            <span>结构占比</span>
+            <span>结构占比</span><i class="src src--none" title="阈值是按测试图定的，没有行业标准；只适合改前改后自己比">无标准</i>
             <em id="snrEffective"></em>
           </div>
           <p class="snr-verdict" id="snrVerdict"></p>
+          <p class="src-legend">
+            <i class="src src--approx">屏幕近似</i>漆色非实测，±3 ΔE
+            <i class="src src--photo">照片量得</i>受打光影响
+            <i class="src src--lit">文献区间</i>有出处可对照
+            <i class="src src--none">无标准</i>阈值自定，只能前后比
+          </p>
           <ul class="snr-colors" id="snrColors"></ul>
         </div>
       
@@ -1536,7 +1554,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v8.0 · 2026-10</span>
+  <span class="ver" id="appVer">v8.1 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1683,11 +1701,11 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=8.0"></script>
-  <script src="gunze-data.js?v=8.0"></script>
-  <script src="engine-data.js?v=8.0"></script>
-  <script src="engine-light.js?v=8.0"></script>
-<script src="engine.js?v=8.0"></script>
-<script src="app.js?v=8.0"></script>
+<script src="kb-data.js?v=8.1"></script>
+  <script src="gunze-data.js?v=8.1"></script>
+  <script src="engine-data.js?v=8.1"></script>
+  <script src="engine-light.js?v=8.1"></script>
+<script src="engine.js?v=8.1"></script>
+<script src="app.js?v=8.1"></script>
 </body>
 </html>
