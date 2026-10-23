@@ -2,7 +2,13 @@
 
 [![tests](https://github.com/taninettty/gunze-paint-mixer/actions/workflows/test.yml/badge.svg)](https://github.com/taninettty/gunze-paint-mixer/actions/workflows/test.yml)
 
-给一个目标色，从**郡士（GSI Creos / Mr.Hobby）Mr. Color** 里算出该用哪几支、各几滴。
+**业余玩家的调色估算器**：给一个目标色，从**郡士 Mr. Color** 里算出一个**接近的配方**和调整方向。
+
+> 它不是色度计。
+> 漆色是屏幕近似值（±3 ΔE），而手喷的波动（稀释、膜厚、底漆、气压）通常比这更大。
+> 所以它的定位是"少走弯路"，不是"精确复刻"。
+
+**项目状态：功能完成，进入维护模式。** 不再追求测色精度；新增内容只限知识库。
 
 双击 `index.html` 就能用——不用装环境、不用联网（`spectral.js`、`gunze-data.js` 都在同目录）。
 
