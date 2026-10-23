@@ -955,6 +955,9 @@
         return td;
       }
 
+      tr.appendChild(cell(r.meanKS == null ? '—' : r.meanKS.toFixed(1)));
+      tr.appendChild(cell(r.contrast == null ? '—' : r.contrast.toFixed(2)));
+      tr.appendChild(cell(r.strength == null ? '—' : (r.strength > 500 ? '>500' : String(r.strength))));
       tr.appendChild(cell(r.chroma.toFixed(0)));
       tr.appendChild(cell(r.tintKeep == null ? '—' : Math.round(r.tintKeep * 100) + '%'));
       tr.appendChild(cell(r.shadeKeep == null ? '—' : Math.round(r.shadeKeep * 100) + '%'));

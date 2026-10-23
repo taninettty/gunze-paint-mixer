@@ -617,7 +617,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', paintOptics: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -1120,6 +1120,26 @@ console.log('\n[51] 漆性指标');
     sorted[0].snr + ' vs ' + sorted[sorted.length - 1].snr);
 
   check('每支都有 hex 与色号', data.every(function (r) { return r.hex && r.code; }), 'ok');
+}
+
+console.log('\n[52] 光学口径');
+{
+  var red = E.paintOptics('#C82828');
+  check('平均 K/S 为正', red.meanKS > 0, red.meanKS.toFixed(2));
+  check('对比率在 0~1', red.contrast != null && red.contrast >= 0 && red.contrast <= 1, String(red.contrast));
+  check('着色明度在 0~1', red.tintY != null && red.tintY >= 0 && red.tintY <= 1, String(red.tintY));
+
+  var blk = E.paintOptics('#1B1B1B');
+  check('黑的 K/S 远高于红', blk.meanKS > red.meanKS * 3, blk.meanKS.toFixed(1) + ' vs ' + red.meanKS.toFixed(1));
+
+  var data = require('./paint-noise.js');
+  check('数据里有 K/S 字段', data.every(function (r) { return typeof r.meanKS === 'number'; }), 'ok');
+
+  var withContrast = data.filter(function (r) { return r.contrast != null; });
+  check('多数漆能算对比率', withContrast.length > 150, withContrast.length + ' 支');
+
+  var withStrength = data.filter(function (r) { return r.strength != null; });
+  check('着色力覆盖全部', withStrength.length === data.length, withStrength.length + ' 支');
 }
 
 console.log('\n[22] 性能');

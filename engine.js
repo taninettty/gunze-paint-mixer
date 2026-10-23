@@ -1198,6 +1198,49 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
   }
 
   /**
+   * 漆的光学口径（有行业定义，可实测对照）：
+   *   对比率 = 黑底反射率 ÷ 白底反射率（ISO 2814 的对比率定义）
+   *   平均 K/S = 380–750nm 吸收散射比的平均值
+   *   着色力基准 = 与白 1:10 混合后的明度（用于算相对着色力）
+   *
+   * 注意：X 是本站的膜厚单位（相对值，不是 µm）；
+   * 输入是屏幕色反推的 K/S，所以数值是"推算值"，实测需涂膜。
+   */
+  function paintOptics(hex, opts) {
+    opts = opts || {};
+    var X = opts.thickness == null ? 0.6 : opts.thickness;
+
+    var ks = paintKs(hex);
+    var sum = 0;
+    for (var i2 = 0; i2 < ks.length; i2++) sum += ks[i2];
+    var meanKS = sum / ks.length;
+
+    function Yof(R) { return measure(R).XYZ[1]; }
+
+    var overBlack = Yof(coatOver(ks, paintKs("#0A0A0A"), X));
+    var overWhite = Yof(coatOver(ks, paintKs("#FFFFFF"), X));
+    var contrast = overWhite > 1e-9 ? overBlack / overWhite : null;
+    if (contrast != null) contrast = Math.max(0, Math.min(1, contrast));
+
+    // 着色力：与白 1:10 混合，看混合后有多"深"（Y 越低越强）
+    var tintR = null;
+    try {
+      tintR = mixSpectrum([{ ks: ks }, { ks: paintKs("#F3F3F0") }], [1, 10]);
+    } catch (e) {
+      tintR = null;
+    }
+    var tintY = tintR ? Yof(tintR) : null;
+
+    return {
+      hex: hex,
+      meanKS: meanKS,
+      contrast: contrast,
+      tintY: tintY,
+      thickness: X
+    };
+  }
+
+  /**
    * 单常数 K-M：厚度 X 的涂层盖在底色 Rg 上的反射率。
    * R = [1 − Rg(a − b·coth(bX))] / [a − Rg + b·coth(bX)]
    */
@@ -3528,6 +3571,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     linToSrgb: linToSrgb,
     mixSpectrum: mixSpectrum,
     paintNoise: paintNoise,
+    paintOptics: paintOptics,
     paintKs: paintKs,
     rOfKs: rOfKs,
     measure: measure,
@@ -3604,6 +3648,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     rgbToHex: rgbToHex,
     ksOf: ksOf,
     mixSpectrum: mixSpectrum,
+    paintOptics: paintOptics,
     paintNoise: paintNoise,
     measure: measure,
     setLib: setLib
