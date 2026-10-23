@@ -128,6 +128,14 @@
     return { now: parts.join('、'), fix: fix.join('，') };
   }
 
+  function noiseOf(code) {
+    if (typeof PAINT_NOISE === "undefined") return null;
+    for (var i = 0; i < PAINT_NOISE.length; i++) {
+      if (PAINT_NOISE[i].code === code) return PAINT_NOISE[i];
+    }
+    return null;
+  }
+
   function grade(de, chroma) {
     // 两个都接近中性（白/灰/黑）时色相肉眼难分，ΔE00 会被低彩度下的色相角放大
     var neutral = typeof chroma === 'number' && chroma < 6;
@@ -881,6 +889,89 @@
   // --------------------------------------------------------------
   var procState = { id: 'chrome', overrides: {}, metal: 'C8', clear: 'C47' };
 
+  // 漆性榜：按混色信噪比排序
+  var rankKind = 'all';
+
+  function renderRank() {
+    var body = $('rankBody');
+    if (!body || typeof PAINT_NOISE === 'undefined') return;
+
+    var rows = PAINT_NOISE.filter(function (r) {
+      if (rankKind !== 'all' && r.kind !== rankKind) return false;
+      return true;
+    });
+
+    rows.sort(function (x, y) {
+      var a1 = x.snr == null ? -1 : x.snr;
+      var b1 = y.snr == null ? -1 : y.snr;
+      return b1 - a1;
+    });
+
+    body.innerHTML = '';
+    var idx = 0;
+
+    rows.forEach(function (r) {
+      idx++;
+      var tr = document.createElement('tr');
+
+      var td0 = document.createElement('td');
+      td0.textContent = r.snr == null ? '—' : String(idx);
+      tr.appendChild(td0);
+
+      var td1 = document.createElement('td');
+      var sw = document.createElement('i');
+      sw.className = 'rk-sw';
+      sw.style.background = r.hex;
+      var cd = document.createElement('span');
+      cd.className = 'rk-code';
+      cd.textContent = r.code;
+      td1.appendChild(sw);
+      td1.appendChild(cd);
+      td1.appendChild(document.createTextNode(r.name));
+      tr.appendChild(td1);
+
+      var td2 = document.createElement('td');
+      if (r.snr == null) {
+        td2.textContent = '不参与';
+        td2.style.color = 'var(--ink-3)';
+      } else {
+        var bar = document.createElement('i');
+        bar.className = 'rk-bar';
+        bar.style.width = Math.round(r.snr * 0.5) + 'px';
+        bar.style.background = r.snr >= 75 ? '#2E7D4F' : r.snr >= 55 ? '#B4530A' : '#8A3B2E';
+        var num = document.createElement('span');
+        num.className = 'rk-snr';
+        num.textContent = r.snr.toFixed(1);
+        td2.appendChild(bar);
+        td2.appendChild(document.createTextNode(' '));
+        td2.appendChild(num);
+      }
+      tr.appendChild(td2);
+
+      function cell(text, cls) {
+        var td = document.createElement('td');
+        td.textContent = text;
+        if (cls) td.className = cls;
+        return td;
+      }
+
+      tr.appendChild(cell(r.chroma.toFixed(0)));
+      tr.appendChild(cell(r.tintKeep == null ? '—' : Math.round(r.tintKeep * 100) + '%'));
+      tr.appendChild(cell(r.shadeKeep == null ? '—' : Math.round(r.shadeKeep * 100) + '%'));
+      tr.appendChild(cell(r.grayMud == null ? '—' : Math.round(r.grayMud * 100) + '%'));
+      tr.appendChild(cell(r.hueDrift == null ? '—' : r.hueDrift.toFixed(0) + '°'));
+
+      body.appendChild(tr);
+    });
+
+    var hint = $('rankHint');
+    if (hint) {
+      var ranked = rows.filter(function (r) { return r.snr != null; }).length;
+      hint.textContent = '共 ' + rows.length + ' 支，其中 ' + ranked + ' 支可排名（' +
+        (rows.length - ranked) + ' 支接近中性，不参与）';
+    }
+  }
+
   function renderChain() {
     var box = $('procChain');
     if (!box || !E.PROCESS_CHAIN) return;
@@ -1009,8 +1100,7 @@
 
       nm.addEventListener('change', function () {
         procState.overrides[i] = nm.value;
-        renderChain();
-    renderProcess();
+        renderProcess();
       });
 
       var role = document.createElement('span');
@@ -1243,6 +1333,24 @@
       cod.className = 'cod';
       cod.textContent = l.pigment.code;
       nameWrap.appendChild(cod);
+
+      var nz = noiseOf(l.pigment.code);
+      if (nz) {
+        var tag = document.createElement('i');
+        if (nz.snr == null) {
+          tag.className = 'src src--none';
+          tag.textContent = '不适用';
+          tag.title = nz.note || '这支漆不参与混色稳定性排名';
+        } else {
+          var lvl = nz.snr >= 80 ? '净' : nz.snr >= 60 ? '中' : '浊';
+          tag.className = 'src ' + (nz.snr >= 80 ? 'src--lit' : nz.snr >= 60 ? 'src--photo' : 'src--approx');
+          tag.textContent = lvl + ' ' + nz.snr.toFixed(0);
+          tag.title = '混色稳定性 ' + nz.snr.toFixed(1) +
+            '（加白彩度 ' + Math.round(nz.tintKeep * 100) + '%、加黑彩度 ' +
+            Math.round(nz.shadeKeep * 100) + '%、色相漂移 ' + nz.hueDrift.toFixed(0) + '°）';
+        }
+        nameWrap.appendChild(tag);
+      }
 
       if (l.tone) {
         var tone = document.createElement('span');
@@ -3734,6 +3842,16 @@
     buildGunzeList();
     buildPigments();
     bind();
+    [].forEach.call(document.querySelectorAll('.rk-btn'), function (b) {
+      b.addEventListener('click', function () {
+        rankKind = b.dataset.kind;
+        [].forEach.call(document.querySelectorAll('.rk-btn'), function (x) {
+          x.classList.toggle('on', x === b);
+        });
+        renderRank();
+      });
+    });
+    renderRank();
     renderChain();
     renderProcess();
 

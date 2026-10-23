@@ -617,7 +617,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -655,6 +655,7 @@ console.log('\n[34] 导出函数清单');
     wbRGB: () => E.wbRGB([200, 180, 160], [1.1, 1, 0.9]),
     estimateLight: () => E.estimateLight([1.1, 1, 0.9]),
     rgb2lab: () => E.rgb2lab(255, 0, 0),
+    paintNoise: () => E.paintNoise('#C82828'),
     nthValue: () => E.nthValue(Float32Array.from([5, 1, 4, 2, 3]), 2),
     shadeMap: () => {
       var w = 40, h = 40, d = new Uint8ClampedArray(w * h * 4);
@@ -1099,6 +1100,26 @@ console.log('\n[50] 性能护栏');
 
   check('400×400 全流程 < 800ms', cost < 800, cost + ' ms');
   check('分区能出结果', seg3.regions.length > 0, seg3.regions.length + ' 块');
+}
+
+console.log('\n[51] 漆性指标');
+{
+  var red = E.paintNoise('#C82828');
+  check('红色有信噪比', red.snr != null && red.snr > 0, red.snr && red.snr.toFixed(1));
+  check('红色加白保真在 0~1', red.tintKeep > 0 && red.tintKeep <= 1, red.tintKeep && red.tintKeep.toFixed(2));
+  check('中性色不参与排名', E.paintNoise('#1B1B1B').snr === null, E.paintNoise('#1B1B1B').note);
+
+  var data = require('./paint-noise.js');
+  check('漆性数据 226 条', data.length === 226, data.length + ' 条');
+
+  var ranked = data.filter(function (r) { return r.snr != null; });
+  check('可排名数量合理', ranked.length > 100 && ranked.length < 226, ranked.length + ' 支');
+
+  var sorted = ranked.slice().sort(function (a, b) { return b.snr - a.snr; });
+  check('排序首尾差明显', sorted[0].snr - sorted[sorted.length - 1].snr > 20,
+    sorted[0].snr + ' vs ' + sorted[sorted.length - 1].snr);
+
+  check('每支都有 hex 与色号', data.every(function (r) { return r.hex && r.code; }), 'ok');
 }
 
 console.log('\n[22] 性能');

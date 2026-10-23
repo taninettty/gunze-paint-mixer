@@ -950,6 +950,20 @@
   .snap-row.warn em { color: var(--warn); font-weight: 600; }
 
   .panel--process { grid-column: 1 / -1; }
+  .panel--rank { grid-column: 1 / -1; }
+  .rank-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+  .rk-btn { border: none; background: #fff; padding: 0 12px; height: 28px; font-family: inherit; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+  .rk-btn.on { background: var(--ink); color: #fff; }
+  .rank-hint { font-size: 11px; color: var(--ink-3); }
+  .rank-wrap { max-height: 62vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+  .rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .rank-table th { position: sticky; top: 0; background: #FBFAF7; text-align: left; font-weight: 500; color: var(--ink-3); font-size: 11px; padding: 7px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  .rank-table td { padding: 6px 8px; border-bottom: 1px dashed var(--line); color: var(--ink-2); white-space: nowrap; }
+  .rank-table tr:hover td { background: #FBF7EE; }
+  .rank-table .rk-sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(0,0,0,.12); vertical-align: -2px; margin-right: 6px; }
+  .rank-table .rk-code { color: var(--ink-3); font-size: 11px; margin-right: 4px; }
+  .rank-table .rk-snr { font-weight: 600; color: var(--ink); }
+  .rank-table .rk-bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent); vertical-align: middle; }
   .src {
     display: inline-block; font-style: normal; font-size: 9.5px; line-height: 1.6;
     padding: 0 5px; border-radius: 999px; border: 1px solid currentColor;
@@ -1248,6 +1262,7 @@
   <button type="button" class="nav-btn" data-page="proc">工序</button>
   <button type="button" class="nav-btn" data-page="kb">喷涂知识</button>
         <button type="button" class="nav-btn" data-page="snr">信噪比</button>
+        <button type="button" class="nav-btn" data-page="rank">漆性</button>
         <button type="button" class="nav-help" id="guideBtn">新手引导</button>
 </nav>
 
@@ -1436,7 +1451,42 @@
 
 
 </div>
-      <section class="panel panel--snr" data-page="snr" hidden>
+      <section class="panel panel--rank" data-page="rank" hidden>
+  <h2><i class="num">7</i>漆性榜<span class="hint">按混色稳定性排序，不是按颜色好看</span></h2>
+  <p class="sd-lead" style="margin:0 0 10px">
+    每支漆用<b>它自己的 K/S 曲线</b>算一个「混色信噪比」：加白、加黑、混灰之后还能保住多少彩度，色相漂不漂。
+    <b>不需要照片，是漆本身的属性。</b>
+  </p>
+  <div class="rank-bar">
+    <span class="ov-switch">
+      <button type="button" class="rk-btn on" data-kind="all">全部</button>
+      <button type="button" class="rk-btn" data-kind="solid">实色</button>
+      <button type="button" class="rk-btn" data-kind="metal">金属</button>
+      <button type="button" class="rk-btn" data-kind="clear">透明</button>
+    </span>
+    <span class="rank-hint" id="rankHint"></span>
+  </div>
+  <div class="rank-wrap">
+    <table class="rank-table">
+      <thead>
+        <tr>
+          <th>#</th><th>漆</th><th>信噪比</th><th>彩度</th>
+          <th>加白彩度</th><th>加黑彩度</th><th>混灰彩度</th><th>色相漂移</th>
+        </tr>
+      </thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+  </div>
+  <p class="sd-lead" style="margin-top:12px;font-size:11.5px;color:var(--ink-3)">
+    指标含义（三个都是<b>与原色相比的彩度比例</b>）：<b>100%</b> 表示混合后彩度不变，
+    <b>低于 100%</b> 表示被稀释（发灰、发浊），<b>高于 100%</b> 表示提纯（深色加白常会升彩度）。
+    <b>色相漂移</b>＝加白后色相偏了几度，越小越稳。
+    彩度 &lt; 8 的接近中性色不参与排名（分母太小，比值没有意义）；
+    金属漆与透明漆也不参与——单常数 K-M 对它们不成立。
+  </p>
+</section>
+
+<section class="panel panel--snr" data-page="snr" hidden>
         <h2><i class="num">6</i>信噪比检测<span class="hint">对比能量落在形体还是细节</span></h2>
 
         <p class="snr-lead">
@@ -1554,7 +1604,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v9.0 · 2026-10</span>
+  <span class="ver" id="appVer">v9.1 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1701,11 +1751,12 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=9.0"></script>
-  <script src="gunze-data.js?v=9.0"></script>
-  <script src="engine-data.js?v=9.0"></script>
-  <script src="engine-light.js?v=9.0"></script>
-<script src="engine.js?v=9.0"></script>
-<script src="app.js?v=9.0"></script>
+<script src="kb-data.js?v=9.1"></script>
+  <script src="gunze-data.js?v=9.1"></script>
+  <script src="engine-data.js?v=9.1"></script>
+  <script src="engine-light.js?v=9.1"></script>
+<script src="engine.js?v=9.1"></script>
+<script src="paint-noise.js?v=9.1"></script>
+<script src="app.js?v=9.1"></script>
 </body>
 </html>

@@ -1134,6 +1134,70 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
   }
 
   /**
+   * 漆本身的「信噪比」：不用照片，只用这支漆的 K/S 曲线。
+   *
+   * 定义：
+   *   加白保真 = 与白 1:1 混合后的彩度 / 原彩度
+   *   加黑保真 = 与黑 1:1 混合后的彩度 / 原彩度
+   *   灰噪     = 与中灰 1:1 混合后掉的彩度比例（越大越"搅浑"）
+   *   色相漂移 = 加白后色相偏移的角度（度）
+   *
+   * 综合信噪比 = 100 × (0.5·加白 + 0.3·加黑 + 0.2·(1−灰噪)) − 0.5·色相漂移
+   *
+   * 这是「混色稳定性」的度量，不是图像信噪比。
+   */
+  function paintNoise(hex) {
+    var baseLab = labOfHex(hex);
+    var baseC = Math.sqrt(baseLab[1] * baseLab[1] + baseLab[2] * baseLab[2]);
+    var baseH = Math.atan2(baseLab[2], baseLab[1]) * 180 / Math.PI;
+    if (baseH < 0) baseH += 360;
+
+    if (baseC < 8) {
+      return { hex: hex, chroma: baseC, tintKeep: null, shadeKeep: null, grayMud: null,
+               hueDrift: null, snr: null, note: "接近中性色，混色指标无意义" };
+    }
+
+    function mixWith(otherHex) {
+      var R = mixSpectrum(
+        [{ ks: paintKs(hex) }, { ks: paintKs(otherHex) }],
+        [1, 1]
+      );
+      return measure(R).lab;
+    }
+
+    function chromaOf(lab) { return Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]); }
+    function hueOf(lab) {
+      var h = Math.atan2(lab[2], lab[1]) * 180 / Math.PI;
+      return h < 0 ? h + 360 : h;
+    }
+
+    var tintLab = mixWith("#F3F3F0");
+    var shadeLab = mixWith("#1B1B1B");
+    var grayLab = mixWith("#8A8A86");
+
+    var tintKeep = chromaOf(tintLab) / baseC;
+    var shadeKeep = chromaOf(shadeLab) / baseC;
+    var grayMud = 1 - chromaOf(grayLab) / baseC;
+
+    var dh = Math.abs(hueOf(tintLab) - baseH);
+    if (dh > 180) dh = 360 - dh;
+
+    var snr = 100 * (0.5 * tintKeep + 0.3 * shadeKeep + 0.2 * (1 - grayMud)) - 0.5 * dh;
+    snr = Math.max(0, Math.min(100, snr));
+
+    return {
+      hex: hex,
+      chroma: baseC,
+      tintKeep: tintKeep,
+      shadeKeep: shadeKeep,
+      grayMud: grayMud,
+      hueDrift: dh,
+      snr: snr,
+      note: null
+    };
+  }
+
+  /**
    * 单常数 K-M：厚度 X 的涂层盖在底色 Rg 上的反射率。
    * R = [1 − Rg(a − b·coth(bX))] / [a − Rg + b·coth(bX)]
    */
@@ -3463,6 +3527,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     rgbToHex: rgbToHex,
     linToSrgb: linToSrgb,
     mixSpectrum: mixSpectrum,
+    paintNoise: paintNoise,
     paintKs: paintKs,
     rOfKs: rOfKs,
     measure: measure,
@@ -3539,6 +3604,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     rgbToHex: rgbToHex,
     ksOf: ksOf,
     mixSpectrum: mixSpectrum,
+    paintNoise: paintNoise,
     measure: measure,
     setLib: setLib
   };
