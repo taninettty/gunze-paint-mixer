@@ -1456,12 +1456,14 @@
   <p class="sd-lead" style="margin:0 0 10px">
     两组数，口径不同，<b>不要混着看</b>：
     <b>K/S · 对比率 · 着色力</b> 是有行业定义的光学量；
-    <b>信噪比 · 加白/加黑/混灰</b> 是本站定义的混色稳定性，只能内部比较。
+    <b>信噪比 · 加白/加黑/混灰</b> 是本站定义的混色稳定性，只能内部比较。<br>
+    <b>每一类按各自的指标排</b>：全部按 K/S、实色按信噪比、中性色按对比率、金属按 K/S、透明按着色力——没有哪一支被排除在外。
   </p>
   <div class="rank-bar">
     <span class="ov-switch">
       <button type="button" class="rk-btn on" data-kind="all">全部</button>
       <button type="button" class="rk-btn" data-kind="solid">实色</button>
+      <button type="button" class="rk-btn" data-kind="neutral">中性</button>
       <button type="button" class="rk-btn" data-kind="metal">金属</button>
       <button type="button" class="rk-btn" data-kind="clear">透明</button>
     </span>
@@ -1485,8 +1487,10 @@
     指标含义（三个都是<b>与原色相比的彩度比例</b>）：<b>100%</b> 表示混合后彩度不变，
     <b>低于 100%</b> 表示被稀释（发灰、发浊），<b>高于 100%</b> 表示提纯（深色加白常会升彩度）。
     <b>色相漂移</b>＝加白后色相偏了几度，越小越稳。
-    彩度 &lt; 8 的接近中性色不参与排名（分母太小，比值没有意义）；
-    金属漆与透明漆也不参与——单常数 K-M 对它们不成立。
+    <b>没有哪一支被排除</b>：彩度 &lt; 8 的中性色按「对比率」排（黑白灰最常用的就是遮盖力）；
+    金属漆按「K/S」排；透明漆按「着色力」排。
+    混色信噪比只对实色有意义——中性色的彩度比值分母太小，K-M 也不适用于金属与透明，
+    但它们在别的指标下照样有名次。
   </p>
 </section>
 
@@ -1608,7 +1612,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v9.2 · 2026-10</span>
+  <span class="ver" id="appVer">v9.3 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1755,12 +1759,12 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=9.2"></script>
-  <script src="gunze-data.js?v=9.2"></script>
-  <script src="engine-data.js?v=9.2"></script>
-  <script src="engine-light.js?v=9.2"></script>
-<script src="engine.js?v=9.2"></script>
-<script src="paint-noise.js?v=9.2"></script>
-<script src="app.js?v=9.2"></script>
+<script src="kb-data.js?v=9.3"></script>
+  <script src="gunze-data.js?v=9.3"></script>
+  <script src="engine-data.js?v=9.3"></script>
+  <script src="engine-light.js?v=9.3"></script>
+<script src="engine.js?v=9.3"></script>
+<script src="paint-noise.js?v=9.3"></script>
+<script src="app.js?v=9.3"></script>
 </body>
 </html>

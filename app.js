@@ -896,14 +896,30 @@
     var body = $('rankBody');
     if (!body || typeof PAINT_NOISE === 'undefined') return;
 
+    function isNeutral(r) { return r.kind === 'solid' && r.chroma < 8; }
+
     var rows = PAINT_NOISE.filter(function (r) {
-      if (rankKind !== 'all' && r.kind !== rankKind) return false;
-      return true;
+      if (rankKind === 'all') return true;
+      if (rankKind === 'neutral') return isNeutral(r);
+      if (rankKind === 'solid') return r.kind === 'solid' && r.chroma >= 8;
+      return r.kind === rankKind;
     });
 
+    // 每类用各自的指标排序
+    function sortKey(r) {
+      if (rankKind === 'solid') return r.snr;
+      if (rankKind === 'neutral') return r.contrast == null ? null : r.contrast * 100;
+      if (rankKind === 'metal') return r.meanKS;
+      if (rankKind === 'clear') return r.strength;
+      return r.meanKS;
+    }
+
     rows.sort(function (x, y) {
-      var a1 = x.snr == null ? -1 : x.snr;
-      var b1 = y.snr == null ? -1 : y.snr;
+      var a1 = sortKey(x), b1 = sortKey(y);
+      var an = a1 == null, bn = b1 == null;
+      if (an && bn) return 0;
+      if (an) return 1;
+      if (bn) return -1;
       return b1 - a1;
     });
 
@@ -915,7 +931,7 @@
       var tr = document.createElement('tr');
 
       var td0 = document.createElement('td');
-      td0.textContent = r.snr == null ? '—' : String(idx);
+      td0.textContent = String(idx);
       tr.appendChild(td0);
 
       var td1 = document.createElement('td');
@@ -969,9 +985,11 @@
 
     var hint = $('rankHint');
     if (hint) {
-      var ranked = rows.filter(function (r) { return r.snr != null; }).length;
-      hint.textContent = '共 ' + rows.length + ' 支，其中 ' + ranked + ' 支可排名（' +
-        (rows.length - ranked) + ' 支接近中性，不参与）';
+      var metricName = rankKind === 'solid' ? '混色信噪比'
+        : rankKind === 'neutral' ? '对比率（遮盖力）'
+        : rankKind === 'clear' ? '着色力'
+        : '平均 K/S';
+      hint.textContent = '共 ' + rows.length + ' 支 · 按' + metricName + '排序';
     }
   }
 
