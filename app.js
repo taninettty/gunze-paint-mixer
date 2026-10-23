@@ -897,10 +897,12 @@
     if (!body || typeof PAINT_NOISE === 'undefined') return;
 
     function isNeutral(r) { return r.kind === 'solid' && r.chroma < 8; }
+    function isSpec(r) { return r.kind === 'metal' || r.kind === 'pearl'; }
 
     var rows = PAINT_NOISE.filter(function (r) {
       if (rankKind === 'all') return true;
       if (rankKind === 'neutral') return isNeutral(r);
+      if (rankKind === 'spec') return isSpec(r);
       if (rankKind === 'solid') return r.kind === 'solid' && r.chroma >= 8;
       return r.kind === rankKind;
     });
@@ -909,6 +911,7 @@
     function sortKey(r) {
       if (rankKind === 'solid') return r.snr;
       if (rankKind === 'neutral') return r.contrast == null ? null : r.contrast * 100;
+      if (rankKind === 'spec') return r.metalIdx;
       if (rankKind === 'metal') return r.meanKS;
       if (rankKind === 'clear') return r.strength;
       return r.meanKS;
@@ -947,6 +950,31 @@
       tr.appendChild(td1);
 
       var td2 = document.createElement('td');
+
+      if (rankKind === 'spec') {
+        var mb = document.createElement('i');
+        mb.className = 'rk-bar';
+        mb.style.width = Math.round(r.metalIdx * 0.5) + 'px';
+        mb.style.background = r.metalIdx >= 40 ? '#8A3B2E' : '#B4530A';
+        var mn = document.createElement('span');
+        mn.className = 'rk-snr';
+        mn.textContent = 'ΔL ' + r.dL.toFixed(0) + ' · ' + r.metalIdx.toFixed(0);
+        td2.appendChild(mb);
+        td2.appendChild(document.createTextNode(' '));
+        td2.appendChild(mn);
+        tr.appendChild(td2);
+        var c0 = document.createElement('td'); c0.textContent = r.meanKS.toFixed(1); tr.appendChild(c0);
+        var c1 = document.createElement('td'); c1.textContent = r.contrast == null ? '—' : r.contrast.toFixed(2); tr.appendChild(c1);
+        var c2 = document.createElement('td'); c2.textContent = r.strength == null ? '—' : String(r.strength); tr.appendChild(c2);
+        var c3 = document.createElement('td'); c3.textContent = r.chroma.toFixed(0); tr.appendChild(c3);
+        var c4 = document.createElement('td'); c4.textContent = '—'; tr.appendChild(c4);
+        var c5 = document.createElement('td'); c5.textContent = '—'; tr.appendChild(c5);
+        var c6 = document.createElement('td'); c6.textContent = '—'; tr.appendChild(c6);
+        var c7 = document.createElement('td'); c7.textContent = r.dC.toFixed(0); tr.appendChild(c7);
+        body.appendChild(tr);
+        return;
+      }
+
       if (r.snr == null) {
         td2.textContent = '不参与';
         td2.style.color = 'var(--ink-3)';
@@ -987,6 +1015,7 @@
     if (hint) {
       var metricName = rankKind === 'solid' ? '混色信噪比'
         : rankKind === 'neutral' ? '对比率（遮盖力）'
+        : rankKind === 'spec' ? '高光反差（ΔL）'
         : rankKind === 'clear' ? '着色力'
         : '平均 K/S';
       hint.textContent = '共 ' + rows.length + ' 支 · 按' + metricName + '排序';

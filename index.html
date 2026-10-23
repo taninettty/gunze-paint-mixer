@@ -1465,6 +1465,7 @@
       <button type="button" class="rk-btn" data-kind="solid">实色</button>
       <button type="button" class="rk-btn" data-kind="neutral">中性</button>
       <button type="button" class="rk-btn" data-kind="metal">金属</button>
+      <button type="button" class="rk-btn" data-kind="spec">高光反差</button>
       <button type="button" class="rk-btn" data-kind="clear">透明</button>
     </span>
     <span class="rank-hint" id="rankHint"></span>
@@ -1490,7 +1491,9 @@
     <b>没有哪一支被排除</b>：彩度 &lt; 8 的中性色按「对比率」排（黑白灰最常用的就是遮盖力）；
     金属漆按「K/S」排；透明漆按「着色力」排。
     混色信噪比只对实色有意义——中性色的彩度比值分母太小，K-M 也不适用于金属与透明，
-    但它们在别的指标下照样有名次。
+    但它们在别的指标下照样有名次。<br>
+    <b>高光反差</b>是金属与珠光环的排名：同一支漆本色与高光状态的明度差，
+    <b>越大＝高光反差越强</b>（深色金属通常最大，不是"越像金属"）。
   </p>
 </section>
 
@@ -1612,7 +1615,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v9.3 · 2026-10</span>
+  <span class="ver" id="appVer">v9.4 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1759,12 +1762,12 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=9.3"></script>
-  <script src="gunze-data.js?v=9.3"></script>
-  <script src="engine-data.js?v=9.3"></script>
-  <script src="engine-light.js?v=9.3"></script>
-<script src="engine.js?v=9.3"></script>
-<script src="paint-noise.js?v=9.3"></script>
-<script src="app.js?v=9.3"></script>
+<script src="kb-data.js?v=9.4"></script>
+  <script src="gunze-data.js?v=9.4"></script>
+  <script src="engine-data.js?v=9.4"></script>
+  <script src="engine-light.js?v=9.4"></script>
+<script src="engine.js?v=9.4"></script>
+<script src="paint-noise.js?v=9.4"></script>
+<script src="app.js?v=9.4"></script>
 </body>
 </html>
