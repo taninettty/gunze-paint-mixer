@@ -561,6 +561,8 @@
       ' · C* ' + Math.hypot(lab[1], lab[2]).toFixed(0) +
       (cast ? ' · ' + cast : '');
 
+    renderStdHint(n);
+
     var badge = $('targetKind');
     if (badge) {
       var KNAME = { metal: '金属色', pearl: '珠光色', clear: '透明色', solid: '' };
@@ -573,6 +575,48 @@
     else compute();
 
     return true;
+  }
+
+  // 目标色对应的标准色号（RAL / FS），取最近三个
+  function renderStdHint(hex) {
+    var box = $('stdHint');
+    if (!box) return;
+    var list = (E.nearestStandards ? E.nearestStandards(hex, 3) : []) || [];
+    if (!list.length) { box.hidden = true; return; }
+
+    box.innerHTML = '';
+    var lab = document.createElement('b');
+    lab.textContent = '标准色参考';
+    box.appendChild(lab);
+
+    list.forEach(function (s) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'std-chip';
+      btn.title = s.name + ' · 点一下切到这个标准色';
+
+      var dot = document.createElement('i');
+      dot.style.background = s.hex;
+      btn.appendChild(dot);
+
+      var txt = document.createElement('span');
+      txt.textContent = s.family + ' ' + s.code;
+      btn.appendChild(txt);
+
+      var de = document.createElement('span');
+      de.className = 'de';
+      de.textContent = 'ΔE ' + s.deltaE.toFixed(1);
+      btn.appendChild(de);
+
+      btn.addEventListener('click', function () {
+        setTarget(s.hex);
+        toast(s.family + ' ' + s.code + ' ' + s.name);
+      });
+
+      box.appendChild(btn);
+    });
+
+    box.hidden = false;
   }
 
   // --------------------------------------------------------------

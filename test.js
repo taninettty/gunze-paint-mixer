@@ -621,7 +621,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', paintOptics: 'function', parseStandard: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', paintOptics: 'function', parseStandard: 'function', nearestStandards: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -1180,6 +1180,24 @@ console.log('\n[54] FS 595 标准色');
   var nearFS = E.nearestPaint(fs1.hex);
   check('FS34079 能找到最近的郡士漆', nearFS && nearFS.deltaE < 25,
     nearFS && (nearFS.pigment.code + ' ΔE=' + nearFS.deltaE.toFixed(1)));
+}
+
+console.log('\n[55] 反向查询：颜色 → 标准色号');
+{
+  var got = E.nearestStandards('#4A4E3F', 3);
+  check('返回三个候选', got.length === 3, got.length + ' 个');
+  check('第一个就是 FS34079', got[0].family === 'FS' && got[0].code === '34079',
+    got[0].family + ' ' + got[0].code + ' ΔE=' + got[0].deltaE.toFixed(2));
+  check('ΔE 升序排列', got[0].deltaE <= got[1].deltaE && got[1].deltaE <= got[2].deltaE,
+    got.map(function (x) { return x.deltaE.toFixed(1); }).join(' / '));
+  check('每条都带名称与色值', got.every(function (x) { return x.name && /^#[0-9A-F]{6}$/.test(x.hex); }), 'ok');
+
+  var near = E.nearestStandards('#383E42', 1);
+  check('RAL 7016 能被反查命中', near[0].family === 'RAL' && near[0].code === '7016',
+    near[0].family + ' ' + near[0].code);
+
+  var n6 = E.nearestStandards('#808080', 6);
+  check('可以要多于三个', n6.length === 6, n6.length + ' 个');
 }
 
 console.log('\n[22] 性能');

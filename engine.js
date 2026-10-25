@@ -3110,6 +3110,36 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     return null;
   }
 
+  /**
+   * 给一个颜色，找最接近的标准色号（RAL / FS）。
+   * 返回按 ΔE 升序的前 n 个：{ family, code, name, hex, deltaE }
+   */
+  function nearestStandards(hex, n) {
+    if (!STD_DATA) return [];
+    var lab = labOfHex(hex);
+    var out = [];
+
+    function scan(family, table) {
+      if (!table) return;
+      Object.keys(table).forEach(function (code) {
+        var e = table[code];
+        out.push({
+          family: family,
+          code: code,
+          name: e.n,
+          hex: e.h,
+          deltaE: deltaE00(lab, labOfHex(e.h))
+        });
+      });
+    }
+
+    scan("RAL", STD_DATA.ral);
+    scan("FS", STD_DATA.fs);
+
+    out.sort(function (x, y) { return x.deltaE - y.deltaE; });
+    return out.slice(0, n == null ? 3 : n);
+  }
+
   /** 第 k 小的值：快速选择，O(n) 平均，不排序整块 */
   function nthValue(arr, k) {
     var lo = 0, hi = arr.length - 1;
@@ -3604,6 +3634,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     paintNoise: paintNoise,
     paintOptics: paintOptics,
     parseStandard: parseStandard,
+    nearestStandards: nearestStandards,
     paintKs: paintKs,
     rOfKs: rOfKs,
     measure: measure,
@@ -3680,6 +3711,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     rgbToHex: rgbToHex,
     ksOf: ksOf,
     mixSpectrum: mixSpectrum,
+    nearestStandards: nearestStandards,
     parseStandard: parseStandard,
     paintOptics: paintOptics,
     paintNoise: paintNoise,
