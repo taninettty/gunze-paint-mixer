@@ -621,7 +621,7 @@ console.log('\n[34] 导出函数清单');
     growRegion: 'function', rectRegion: 'function',
     shadesOfGray: 'function', wbGain: 'function', wbRGB: 'function',
     estimateLight: 'function',
-    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', paintOptics: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
+    castName: 'function', metalName: 'function', toneOf: 'function', noiseReport: 'function', snrReport: 'function', layerReport: 'function', mergeSimilar: 'function', freqSnr: 'function', segmentRegions: 'function', colorRegions: 'function', lightReport: 'function', regionLights: 'function', shadeMap: 'function', nthValue: 'function', paintNoise: 'function', paintOptics: 'function', parseStandard: 'function', rgb2lab: 'function', regionSnr: 'function', bandSnr: 'function', colorfulness: 'function', colorEntropy: 'function', centerBias: 'function',
     judgeMetallic: 'function', analyzeGloss: 'function',
     shadeVariants: 'function', litColor: 'function', tintRecipe: 'function',
     deltaE00: 'function', labOfHex: 'function', hexToRgb: 'function',
@@ -1144,6 +1144,25 @@ console.log('\n[52] 光学口径');
 
   var withStrength = data.filter(function (r) { return r.strength != null; });
   check('着色力覆盖全部', withStrength.length === data.length, withStrength.length + ' 支');
+}
+
+console.log('\n[53] 标准色号');
+{
+  var ral = E.parseStandard('RAL 7016');
+  check('RAL 7016 能解析', ral && ral.family === 'RAL' && ral.code === '7016', ral && ral.name);
+  check('RAL 色值是大写 hex', ral && /^#[0-9A-F]{6}$/.test(ral.hex), ral && ral.hex);
+
+  check('小写与无空格也能认', (E.parseStandard('ral7016') || {}).code === '7016', E.parseStandard('ral7016') && E.parseStandard('ral7016').code);
+  check('不认识的输入返回 null', E.parseStandard('hello') === null, String(E.parseStandard('hello')));
+  check('空输入返回 null', E.parseStandard('') === null, String(E.parseStandard('')));
+
+  var std = require('./standards-data.js');
+  check('RAL 数据条数合理', Object.keys(std.ral).length > 200, Object.keys(std.ral).length + ' 条');
+  check('RAL 7016 是石墨灰', std.ral['7016'] && std.ral['7016'].h === '#383E42', std.ral['7016'] && std.ral['7016'].h);
+
+  var near = E.nearestPaint(ral.hex);
+  check('RAL 7016 能找到最接近的郡士漆', near && near.pigment && near.deltaE < 20,
+    near && (near.pigment.code + ' ΔE=' + near.deltaE.toFixed(1)));
 }
 
 console.log('\n[22] 性能');

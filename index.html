@@ -1285,7 +1285,7 @@
 
     <div class="row">
       <input type="color" id="colorInput" value="#b79764" aria-label="选择目标色">
-      <input class="hexinput" id="hexInput" value="#B79764" spellcheck="false" aria-label="十六进制色值">
+      <input class="hexinput" id="hexInput" value="#B79764" spellcheck="false" aria-label="十六进制色值，也支持 RAL 色号">
     </div>
 
     <div class="row">
@@ -1615,7 +1615,7 @@
 
 
 <footer>
-  <span class="ver" id="appVer">v10.0 · 2026-10</span>
+  <span class="ver" id="appVer">v10.1 · 2026-10</span>
   模型说明：采用库贝尔卡－蒙克单常数理论；每支漆的吸收/散射曲线由其屏幕色反推，屏幕色本身是近似值，未做实物标定。
   色差（ΔE00）小于 2 表示肉眼基本难以分辨。结果用于定方向和比例，正式上色前先在小样上试。
 </footer>
@@ -1762,12 +1762,13 @@
   混色引擎没能加载。若是离线环境，请确认 spectral.js 和 gunze-data.js 都放在本文件同目录。
 </div>
 
-<script src="kb-data.js?v=10.0"></script>
-  <script src="gunze-data.js?v=10.0"></script>
-  <script src="engine-data.js?v=10.0"></script>
-  <script src="engine-light.js?v=10.0"></script>
-<script src="engine.js?v=10.0"></script>
-<script src="paint-noise.js?v=10.0"></script>
-<script src="app.js?v=10.0"></script>
+<script src="kb-data.js?v=10.1"></script>
+  <script src="gunze-data.js?v=10.1"></script>
+  <script src="engine-data.js?v=10.1"></script>
+  <script src="engine-light.js?v=10.1"></script>
+<script src="standards-data.js?v=10.1"></script>
+<script src="engine.js?v=10.1"></script>
+<script src="paint-noise.js?v=10.1"></script>
+<script src="app.js?v=10.1"></script>
 </body>
 </html>

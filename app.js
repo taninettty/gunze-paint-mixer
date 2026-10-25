@@ -2990,11 +2990,20 @@
     });
 
     $('hexInput').addEventListener('input', function (ev) {
+      // 标准色号：RAL 7016 / ral7016
+      var std = E.parseStandard ? E.parseStandard(ev.target.value) : null;
+      if (std) {
+        setTarget(std.hex, { keepInput: true, defer: true });
+        toast(std.family + ' ' + std.code + ' ' + std.name);
+        return;
+      }
       var n = normalizeHex(ev.target.value);
       if (n) setTarget(n, { keepInput: true, defer: true });
     });
 
     $('hexInput').addEventListener('blur', function (ev) {
+      var std = E.parseStandard ? E.parseStandard(ev.target.value) : null;
+      if (std) { ev.target.value = state.targetHex; return; }
       var n = normalizeHex(ev.target.value);
       ev.target.value = n || state.targetHex;
     });

@@ -3080,6 +3080,29 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
   }
 
 
+  /**
+   * 标准色号解析：目前支持 RAL Classic（如 "RAL 7016" / "ral7016"）。
+   * 返回 { family, code, name, hex }，不认识返回 null。
+   *
+   * 色值是屏幕近似换算，不是 RAL 官方数字色值（那是授权商品）。
+   */
+  var STD_DATA = (typeof module !== "undefined" && module.exports)
+    ? require("./standards-data.js")
+    : (typeof window !== "undefined" ? window.STANDARDS : null);
+
+  function parseStandard(input) {
+    if (!STD_DATA || input == null) return null;
+    var s = String(input).trim().toUpperCase().replace(/\s+/g, "");
+    if (!s) return null;
+
+    var m = s.match(/^RAL-?(\d{4})$/);
+    if (m && STD_DATA.ral && STD_DATA.ral[m[1]]) {
+      var e = STD_DATA.ral[m[1]];
+      return { family: "RAL", code: m[1], name: e.n, hex: e.h };
+    }
+    return null;
+  }
+
   /** 第 k 小的值：快速选择，O(n) 平均，不排序整块 */
   function nthValue(arr, k) {
     var lo = 0, hi = arr.length - 1;
@@ -3573,6 +3596,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     mixSpectrum: mixSpectrum,
     paintNoise: paintNoise,
     paintOptics: paintOptics,
+    parseStandard: parseStandard,
     paintKs: paintKs,
     rOfKs: rOfKs,
     measure: measure,
@@ -3649,6 +3673,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     rgbToHex: rgbToHex,
     ksOf: ksOf,
     mixSpectrum: mixSpectrum,
+    parseStandard: parseStandard,
     paintOptics: paintOptics,
     paintNoise: paintNoise,
     measure: measure,
