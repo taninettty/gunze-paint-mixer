@@ -3081,7 +3081,7 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
 
 
   /**
-   * 标准色号解析：目前支持 RAL Classic（如 "RAL 7016" / "ral7016"）。
+   * 标准色号解析：支持 RAL Classic（RAL 7016）与 FS 595（FS34079 / 34079）。
    * 返回 { family, code, name, hex }，不认识返回 null。
    *
    * 色值是屏幕近似换算，不是 RAL 官方数字色值（那是授权商品）。
@@ -3099,6 +3099,13 @@ var PROCESS_CHAIN = DATA.PROCESS_CHAIN || [];
     if (m && STD_DATA.ral && STD_DATA.ral[m[1]]) {
       var e = STD_DATA.ral[m[1]];
       return { family: "RAL", code: m[1], name: e.n, hex: e.h };
+    }
+
+    // FS 595：FS34079 / fs-34079 / 直接五位数字
+    m = s.match(/^(?:FS-?)?(\d{5})$/);
+    if (m && STD_DATA.fs && STD_DATA.fs[m[1]]) {
+      var f = STD_DATA.fs[m[1]];
+      return { family: "FS", code: m[1], name: f.n, hex: f.h };
     }
     return null;
   }

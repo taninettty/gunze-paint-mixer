@@ -2997,6 +2997,12 @@
         toast(std.family + ' ' + std.code + ' ' + std.name);
         return;
       }
+      var raw = String(ev.target.value || '').trim().toUpperCase().replace(/\s+/g, '');
+      var fsMiss = raw.match(/^(?:FS-?)?(\d{5})$/);
+      if (fsMiss) {
+        toast('FS ' + fsMiss[1] + '：官方标准里没有三刺激值，暂不支持');
+        return;
+      }
       var n = normalizeHex(ev.target.value);
       if (n) setTarget(n, { keepInput: true, defer: true });
     });

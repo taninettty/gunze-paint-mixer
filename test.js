@@ -1165,6 +1165,23 @@ console.log('\n[53] 标准色号');
     near && (near.pigment.code + ' ΔE=' + near.deltaE.toFixed(1)));
 }
 
+console.log('\n[54] FS 595 标准色');
+{
+  var fs1 = E.parseStandard('FS34079');
+  check('FS34079 能解析', fs1 && fs1.family === 'FS' && fs1.code === '34079', fs1 && fs1.name);
+  check('FS 色值是 hex', fs1 && /^#[0-9A-F]{6}$/.test(fs1.hex), fs1 && fs1.hex);
+  check('五位数字也能认', (E.parseStandard('37038') || {}).code === '37038', (E.parseStandard('37038') || {}).name);
+  check('没有色度数据的返回 null', E.parseStandard('34094') === null, String(E.parseStandard('34094')));
+
+  var std2 = require('./standards-data.js');
+  check('FS 数据条数', Object.keys(std2.fs).length > 200, Object.keys(std2.fs).length + ' 条');
+  check('FS 与 RAL 共存', Object.keys(std2.ral).length > 200, 'RAL ' + Object.keys(std2.ral).length);
+
+  var nearFS = E.nearestPaint(fs1.hex);
+  check('FS34079 能找到最近的郡士漆', nearFS && nearFS.deltaE < 25,
+    nearFS && (nearFS.pigment.code + ' ΔE=' + nearFS.deltaE.toFixed(1)));
+}
+
 console.log('\n[22] 性能');
 const t0 = Date.now();
 for (let i = 0; i < 10; i++) {
